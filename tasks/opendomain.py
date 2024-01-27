@@ -2,7 +2,7 @@ import datasets
 import functools
 
 @functools.lru_cache(1)
-class NQ_Open:
+class NQOpen:
 
     def __init__(self, tokenizer, split='validation'):
         self.dataset = datasets.load_dataset('nq_open', split=split)
