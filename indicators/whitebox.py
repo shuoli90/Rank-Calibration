@@ -28,8 +28,6 @@ def get_neg_loglikelihoods(model, tokenizer, sequences):
         for generation_index in range(generations.shape[0]):
             prompt = prompt[prompt != tokenizer.pad_token_id]
             generation = generations[generation_index][generations[generation_index] != tokenizer.pad_token_id]
-
-            # This computation of the negative log likelihoods follows this tutorial: https://huggingface.co/docs/transformers/perplexity
             target_ids = generation.clone()
             target_ids[:len(prompt)] = -100
             model_output = model(torch.reshape(generation, (1, -1)), labels=target_ids, output_hidden_states=True)
@@ -52,43 +50,30 @@ def get_neg_loglikelihoods(model, tokenizer, sequences):
             average_of_last_layer_token_embeddings = torch.mean(hidden_states[-1], dim=1)
             sequence_embeddings.append(average_of_last_layer_token_embeddings)
 
-        most_likely_generation = sample['most_likely_generation_ids'].to(device)
-        target_ids = most_likely_generation.clone()
-        target_ids[:len(prompt)] = -100
-        model_output = model(torch.reshape(most_likely_generation, (1, -1)),
-                                labels=target_ids,
-                                output_hidden_states=True)
-        hidden_states = model_output['hidden_states']
-        average_neg_log_likelihood_of_most_likely_gen = model_output['loss']
-        most_likely_generation_embedding = torch.mean(hidden_states[-1], dim=1)
-
-        # second_most_likely_generation = sample['second_most_likely_generation_ids'].to(device)
-        # target_ids = second_most_likely_generation.clone()
+        # most_likely_generation = sample['most_likely_generation_ids'].to(device)
+        # target_ids = most_likely_generation.clone()
         # target_ids[:len(prompt)] = -100
-        # model_output = model(torch.reshape(second_most_likely_generation, (1, -1)),
+        # model_output = model(torch.reshape(most_likely_generation, (1, -1)),
         #                         labels=target_ids,
         #                         output_hidden_states=True)
         # hidden_states = model_output['hidden_states']
-        # average_neg_log_likelihood_of_second_most_likely_gen = model_output['loss']
-        # second_most_likely_generation_embedding = torch.mean(hidden_states[-1], dim=1)
-
-        neg_log_likelihood_of_most_likely_gen = average_neg_log_likelihood_of_most_likely_gen * (
-            len(most_likely_generation) - len(prompt))
+        # average_neg_log_likelihood_of_most_likely_gen = model_output['loss']
+        # most_likely_generation_embedding = torch.mean(hidden_states[-1], dim=1)
+        # neg_log_likelihood_of_most_likely_gen = average_neg_log_likelihood_of_most_likely_gen * (
+        #     len(most_likely_generation) - len(prompt))
 
         sequence_embeddings = torch.stack(sequence_embeddings)
         result_dict['prompt'] = prompt
         result_dict['generations'] = generations
         result_dict['average_neg_log_likelihoods'] = average_neg_log_likelihoods
         result_dict['neg_log_likelihoods'] = neg_log_likelihoods
-        result_dict['sequence_embeddings'] = most_likely_generation_embedding
-        result_dict['most_likely_sequence_embedding'] = most_likely_generation
+        # result_dict['sequence_embeddings'] = most_likely_generation_embedding
+        # result_dict['most_likely_sequence_embedding'] = most_likely_generation
         result_dict['average_unconditioned_neg_log_likelihoods'] = average_unconditioned_neg_log_likelihoods
         result_dict['neg_unconditioned_log_likelihoods'] = neg_unconditioned_log_likelihoods
         result_dict['pointwise_mutual_information'] = pointwise_mutual_information
-        result_dict['average_neg_log_likelihood_of_most_likely_gen'] = average_neg_log_likelihood_of_most_likely_gen
-        # result_dict[
-            # 'average_neg_log_likelihood_of_second_most_likely_gen'] = average_neg_log_likelihood_of_second_most_likely_gen
-        result_dict['neg_log_likelihood_of_most_likely_gen'] = neg_log_likelihood_of_most_likely_gen
+        # result_dict['average_neg_log_likelihood_of_most_likely_gen'] = average_neg_log_likelihood_of_most_likely_gen
+        # result_dict['neg_log_likelihood_of_most_likely_gen'] = neg_log_likelihood_of_most_likely_gen
         # result_dict['semantic_set_ids'] = torch.tensor(similarities_dict[id_[0]]['semantic_set_ids'], device=device)
         result_dict['id'] = id_
         result.append(result_dict)
@@ -113,21 +98,18 @@ class WhiteBox():
 
 class SemanticEntropy(WhiteBox):
 
-    def __init__(self, prompts, generateds, most_likely_generations, model, tokenizer, device='cuda'):
+    def __init__(self, prompts, generateds, model, tokenizer, device='cuda'):
         self.device = device if device is not None else torch.device('cpu')
         self.similarity_model = NLIModel(device=self.device)
         self.mem = defaultdict(dict)
         self.model = model
         self.tokenizer = tokenizer
-
         gen_texts = [[gen['generated_text'] for gen in generated] for generated in generateds]
         self.sequences = [{
             'prompt': torch.tensor(tokenizer.encode(prompt)).to(self.device),
             'generations': torch.tensor(tokenizer(gen_text, padding='longest')['input_ids']).to(self.device),
-            'most_likely_generation_ids': torch.tensor(tokenizer.encode(most_likely_generation[0]['generated_text'], padding='longest')).to(self.device),
             'id': 0
-        } for prompt, gen_text, most_likely_generation in zip(prompts, gen_texts, most_likely_generations)]
-
+        } for prompt, gen_text in zip(prompts, gen_texts)]
         self.generations = [{'question':prompt, 'answers':gen_text} for prompt, gen_text in zip(prompts, gen_texts)]
 
     @functools.cached_property

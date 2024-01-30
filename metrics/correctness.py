@@ -12,3 +12,4 @@ class Score():
         if isinstance(score, dict):
             score = score[self.mode]
         return {'score': score, 'pass': score > self.threshold}
+

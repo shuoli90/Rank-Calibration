@@ -7,7 +7,7 @@ from models import opensource
 
 if __name__ == '__main__':
 
-    pipe = opensource.TextGenerationModel(model_name=f"facebook/opt-350m", torch_dtype=torch.bfloat16)
+    pipe = opensource.TextGenerationModel(model_name="facebook/opt-350m", torch_dtype=torch.bfloat16)
     # prompts = ['Once upon a time']
     prompts = ['Once upon a time', 'when the sun rises']
     generateds = pipe.generate(prompts, max_length=50, num_return_sequences=5, do_sample=True)
