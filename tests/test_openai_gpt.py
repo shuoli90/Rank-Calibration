@@ -5,6 +5,5 @@ import torch
 from models import gpt
 
 if __name__ == '__main__':
-    # gpt.setup_openai()
     prompts = ['Once upon a time']
     responses = gpt.generate(prompts, model="gpt-3.5-turbo-0613", max_tokens=50, n=1)
