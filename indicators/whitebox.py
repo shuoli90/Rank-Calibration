@@ -1,8 +1,9 @@
 import torch
-import transformers
 import functools
 from models.opensource import NLIModel
 from collections import defaultdict
+
+CONTRADICT, NEUTRAL, AGREE = 0, 1, 2
 
 @torch.no_grad()
 def get_neg_loglikelihoods(model, tokenizer, sequences):
@@ -93,6 +94,13 @@ def get_neg_loglikelihoods(model, tokenizer, sequences):
         result.append(result_dict)
 
     return result
+
+def _logmeanexp(x, dim, ignore_negative_inf=False):
+    if ignore_negative_inf:
+        cnt = (x > -torch.inf).sum(dim)
+    else:
+        cnt = torch.tensor(x.shape[dim])
+    return torch.logsumexp(x, dim=dim) - torch.log(cnt)
     
 class WhiteBox():
 
@@ -102,58 +110,73 @@ class WhiteBox():
     def similarities(self):
         return NotImplementedError
 
-def _create_semantic_sets(sample):
-    # https://github.com/lorenzkuhn/semantic_uncertainty
-    generated_texts = sample['mapping']
-    sim_mat = sample['sim_mat'].argmax(axis=-1)
-    # unique_ans is also a list of integers.
-    unique_generated_texts = sorted(list(set(generated_texts)))
-    semantic_set_ids = {ans: i for i, ans in enumerate(unique_generated_texts)} # one id for each exact-match answer
-    for i, ans_i in enumerate(unique_generated_texts):
-        for j, ans_j in enumerate(unique_generated_texts[i+1:], i+1):
-            if min(sim_mat[ans_i,ans_j], sim_mat[ans_j,ans_i]) > CONTRADICT:
-                semantic_set_ids[ans_j] = semantic_set_ids[ans_i]
-
-    list_of_semantic_set_ids = [semantic_set_ids[x] for x in generated_texts]
-    # map according to the order of appearance
-    _map = defaultdict(int)
-    ret = []
-    for i, ans in enumerate(list_of_semantic_set_ids):
-        if ans not in _map:
-            _map[ans] = len(_map)
-        ret.append(_map[ans])
-    return ret
-
 
 class SemanticEntropy(WhiteBox):
 
-    def __init__(self, device=None, generations=None):
+    def __init__(self, prompts, generateds, most_likely_generations, model, tokenizer, device='cuda'):
         self.device = device if device is not None else torch.device('cpu')
         self.similarity_model = NLIModel(device=self.device)
         self.mem = defaultdict(dict)
-        if generations is not None:
-            self.generations = generations
-        else:
-            # load in generations
-            return NotImplementedError
+        self.model = model
+        self.tokenizer = tokenizer
+
+        gen_texts = [[gen['generated_text'] for gen in generated] for generated in generateds]
+        self.sequences = [{
+            'prompt': torch.tensor(tokenizer.encode(prompt)).to(self.device),
+            'generations': torch.tensor(tokenizer(gen_text, padding='longest')['input_ids']).to(self.device),
+            'most_likely_generation_ids': torch.tensor(tokenizer.encode(most_likely_generation[0]['generated_text'], padding='longest')).to(self.device),
+            'id': 0
+        } for prompt, gen_text, most_likely_generation in zip(prompts, gen_texts, most_likely_generations)]
+
+        self.generations = [{'question':prompt, 'answers':gen_text} for prompt, gen_text in zip(prompts, gen_texts)]
 
     @functools.cached_property
     def similarities(self):
         sims = [self.similarity_model.classify(g['question'], g['answers']) for g in self.generations]
         return sims
     
-    def _get_semantic_ids(self):
-        return [_create_semantic_sets(s) for s in self.similarities]
+    def _create_semantic_sets(self, sample):
+        # https://github.com/lorenzkuhn/semantic_uncertainty
+        generated_texts = sample['mapping']
+        sim_mat = sample['sim_mat'].argmax(axis=-1)
+        unique_generated_texts = sorted(list(set(generated_texts)))
+        semantic_set_ids = {ans: i for i, ans in enumerate(unique_generated_texts)} # one id for each exact-match answer
+        for i, ans_i in enumerate(unique_generated_texts):
+            for j, ans_j in enumerate(unique_generated_texts[i+1:], i+1):
+                if min(sim_mat[ans_i,ans_j], sim_mat[ans_j,ans_i]) > CONTRADICT:
+                    semantic_set_ids[ans_j] = semantic_set_ids[ans_i]
+
+        list_of_semantic_set_ids = [semantic_set_ids[x] for x in generated_texts]
+        _map = defaultdict(int)
+        ret = []
+        for i, ans in enumerate(list_of_semantic_set_ids):
+            if ans not in _map:
+                _map[ans] = len(_map)
+            ret.append(_map[ans])
+        return ret
     
-    # whitebox methods
-    def get_semantic_entropy(self, num_gens:int, normalize:bool):
-        if self.likelihoods is None:
-            return None
-        semantic_set_ids = self._get_semantic_ids(num_gens)
-        nlls = self.likelihoods['generations|neg_log_likelihood'][:, :num_gens]
-        if normalize:
-            nlls = nlls / self.likelihoods['generations|length'][:, :num_gens]
-        return _hard_semantic_entropies(nlls, torch.tensor(semantic_set_ids))
+    @functools.cached_property
+    def neg_log_likelihoods(self):
+        return get_neg_loglikelihoods(self.model, self.tokenizer, self.sequences)
+    
+    @functools.cached_property
+    def semantic_ids(self):
+        return [self._create_semantic_sets(s) for s in self.similarities]
+    
+    def compute_scores(self, normalize=True):
+        # https://github.com/lorenzkuhn/semantic_uncertainty
+        # https://github.com/zlin7/UQ-NLG
+        log_likelihoods = -torch.stack([s['average_neg_log_likelihoods'] for s in self.neg_log_likelihoods]) if normalize else -torch.stack([s['neg_log_likelihoods'] for s in self.neg_log_likelihoods])
+        log_likelihoods = log_likelihoods.to(self.device)
+        semantic_set_ids = torch.tensor(self.semantic_ids, device=self.device)
+        num_samples = log_likelihoods.shape[0]
+
+        max_num_semantic_ids = semantic_set_ids.max().item() + 1 + 1
+        aggregated_likelihoods = torch.log(torch.zeros((num_samples, max_num_semantic_ids)))
+        for semantic_set_id in torch.unique(semantic_set_ids):
+            temp = torch.where(semantic_set_ids == semantic_set_id, log_likelihoods, -torch.inf)
+            aggregated_likelihoods[:, semantic_set_id] = torch.logsumexp(temp, 1)
+        return -_logmeanexp(aggregated_likelihoods, dim=1, ignore_negative_inf=True)
 
 
         
