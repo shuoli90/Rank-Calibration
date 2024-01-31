@@ -1,6 +1,7 @@
 import torch
 from transformers import pipeline
 import functools
+import numpy as np
 
 class TextGenerationModel:
     
@@ -17,6 +18,12 @@ class TextGenerationModel:
     @functools.cached_property
     def tokenizer(self):
         return self.pip.tokenizer
+    
+    @classmethod
+    def clean_generation(cls, generation):
+        # return string before the first "\n" character
+        idx = np.char.find(generation, "\n", start=0, end=None)
+        return generation.strip() if idx == -1 else generation[:idx].strip()
 
 class NLIModel:
     
@@ -33,8 +40,8 @@ class NLIModel:
         sim_mat_batch = torch.zeros((len(unique_ans), len(unique_ans),3))
         pairs = []
         make_input = lambda x: dict(text=x[0],text_pair=x[1])
-        for i, ans_i in enumerate(prompts):
-            for j, ans_j in enumerate(prompts):
+        for i, ans_i in enumerate(unique_ans):
+            for j, ans_j in enumerate(unique_ans):
                 if i == j: continue
                 logits = self.pip(make_input([f"{question} {ans_i}", f"{question} {ans_j}"]), return_all_scores=True, **kwargs)
                 sim_mat_batch[i,j] = torch.tensor([logit['score'] for logit in logits])

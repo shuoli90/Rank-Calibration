@@ -8,14 +8,14 @@ from transformers.pipelines.pt_utils import KeyDataset
 import pandas as pd
 from tqdm import tqdm
 import logging
-from tasks import opendomain
-from models import opensource
+from tasks import factoid
+from models import opensource, gpt
 from metrics import correctness
 from indicators import whitebox
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', type=str, default="facebook/opt-350m")
+    parser.add_argument('--model', type=str, default='meta-llama/Llama-2-7b-hf')
     parser.add_argument('--dataset', type=str, default='nq-open')
     parser.add_argument('--split', type=str, default='validation')
     parser.add_argument('--correctness', type=str, default='rouge')
@@ -32,23 +32,28 @@ if __name__ == '__main__':
     # setup generation correctness score
     score = correctness.Score(metric_name=args.correctness, mode=args.mode, metric_threshold=args.metric_threshold)
     # setup model and dataset
-    pipe = opensource.TextGenerationModel(model_name=args.model, torch_dtype=torch.bfloat16)
-    NQ_Open = opendomain.NQ_Open(pipe.tokenizer, args.split)
+    if 'gpt' in args.model:
+        pipe = gpt.GPTModel(model_name=args.model)
+    else:
+        pipe = opensource.TextGenerationModel(model_name=args.model, torch_dtype=torch.bfloat16)
+        if pipe.tokenizer.pad_token_id is None:
+            pipe.tokenizer.pad_token = pipe.tokenizer.eos_token
+    NQ_Open = factoid.NQ_Open(pipe.tokenizer, args.split)
     dataset = NQ_Open.get_dataset()
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=False)
 
     # collect generation and check correctness
     results = []
     for idx, batch in tqdm(enumerate(dataloader), total=len(dataloader)):
-        if idx > 4:
+        if idx > 100:
             break
         prompts = batch['prompt']
-        generated = pipe.generate(prompts, max_length=50, do_sample=False, return_full_text=False)
-        generations = [element[0]['generated_text'] for element in generated]
+        generated = pipe.generate(prompts, max_length=50, do_sample=False, return_full_text=False)[0]
+        generations = [opensource.TextGenerationModel.clean_generation(element['generated_text']) for element in generated]
         references = [text[0] for text in batch['answer']]
         result = score(generations, [references])
 
-        generateds = pipe.generate(prompts, max_length=50, num_return_sequences=5, do_sample=True)
+        generateds = pipe.generate(prompts, max_length=50, num_return_sequences=30, do_sample=True, return_full_text=False)
         se = whitebox.SemanticEntropy(
             prompts=prompts, 
             generateds=generateds, 
@@ -60,5 +65,9 @@ if __name__ == '__main__':
     
     # generate pandas dataframe from results
     df = pd.DataFrame(results)
-    # compute stats
-    breakpoint()
+    # save results to csv
+    df.to_csv(f'../tmp/calibrate.csv', index=False)
+
+    print("----------------------------------")
+    logging.log(logging.INFO, f"Results saved to ../tmp/calibrate.csv")
+    print("----------------------------------")

@@ -7,8 +7,8 @@ from tenacity import (
     stop_after_attempt,
     wait_random_exponential,
 )  # for exponential backoff
-
 from openai import OpenAI
+from transformers import AutoTokenizer
 
 dotenv_path = Path('.env')
 load_dotenv(dotenv_path=dotenv_path)
@@ -24,23 +24,29 @@ def chat_gpt(prompt):
     )
     return response.choices[0].message.content.strip()
 
-@retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
-def chatcompletions_with_backoff(model, messages, **kwargs):
+# @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
+def chatcompletions_with_backoff(model, messages, n, **kwargs):
     return client.chat.completions.create(
         model=model, 
         messages=messages,
-        **kwargs)
+        n=n,)
+class GPTModel:
 
-def generate(prompts, model="gpt-3.5-turbo-0613", **kwargs):
+    def __init__(self, model_name="gpt-3.5-turbo-0613", num_return_sequences=1, **kwargs):
+        self.model_name = model_name
+        self.tokenizer = AutoTokenizer.from_pretrained("openai-gpt")
+        self.num_return_sequences = num_return_sequences
 
-    messages = [{"role": "user",
-                 "content": prompt} for prompt in prompts]
-    response = chatcompletions_with_backoff(
-        model=model,
-        messages=messages,
-        **kwargs,
-    )
-    responses = [choice.message.content.strip()
-               for choice
-               in response.choices]
-    return responses
+    def generate(self, prompts, **kwargs):
+
+        messages = [{"role": "user",
+                    "content": prompt} for prompt in prompts]
+        response = chatcompletions_with_backoff(
+            model=self.model_name,
+            messages=messages,
+            n=self.num_return_sequences,
+        )
+        responses = [{'generated_text': choice.message.content.strip()}
+                for choice
+                in response.choices]
+        return responses
