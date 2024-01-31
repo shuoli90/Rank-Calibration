@@ -4,6 +4,7 @@ from models.opensource import NLIModel, TextGenerationModel
 from collections import defaultdict
 
 CONTRADICT, NEUTRAL, AGREE = 0, 1, 2
+llh_shift = torch.tensor(5.0)
 
 @torch.no_grad()
 def get_neg_loglikelihoods(model, tokenizer, sequences):
@@ -30,7 +31,7 @@ def get_neg_loglikelihoods(model, tokenizer, sequences):
             generation = generations[generation_index][generations[generation_index] != tokenizer.pad_token_id]
             target_ids = generation.clone()
             model_output = model(torch.reshape(generation, (1, -1)), labels=target_ids, output_hidden_states=True)
-            generation_only = generation.clone()[(len(prompt) - 1):]
+            generation_only = generation.clone()
             unconditioned_model_output = model(torch.reshape(generation_only, (1, -1)),
                                                 labels=generation_only,
                                                 output_hidden_states=True)
@@ -62,12 +63,15 @@ def get_neg_loglikelihoods(model, tokenizer, sequences):
 
     return result
 
-def _logmeanexp(x, dim, ignore_negative_inf=False):
-    if ignore_negative_inf:
-        cnt = (x > -torch.inf).sum(dim)
-    else:
-        cnt = torch.tensor(x.shape[dim])
-    return torch.logsumexp(x, dim=dim) - torch.log(cnt)
+# def _logmeanexp(x, dim, ignore_negative_inf=False):
+#     if ignore_negative_inf:
+#         cnt = (x > -torch.inf).sum(dim)
+#     else:
+#         cnt = torch.tensor(x.shape[dim])
+#     return torch.logsumexp(x, dim=dim) - torch.log(cnt)
+#     entropy = - torch.sum(aggregated_likelihoods, dim=0) / torch.tensor(aggregated_likelihoods.shape[0])
+#         entropies.append(entropy)
+#     return 
     
 class WhiteBox():
 
@@ -135,12 +139,16 @@ class SemanticEntropy(WhiteBox):
         semantic_set_ids = torch.tensor(self.semantic_ids, device=self.device)
         num_samples = log_likelihoods.shape[0]
 
-        max_num_semantic_ids = semantic_set_ids.max().item() + 1 + 1
-        aggregated_likelihoods = torch.log(torch.zeros((num_samples, max_num_semantic_ids)))
-        for semantic_set_id in torch.unique(semantic_set_ids):
-            temp = torch.where(semantic_set_ids == semantic_set_id, log_likelihoods, -torch.inf)
-            aggregated_likelihoods[:, semantic_set_id] = torch.logsumexp(temp, 1)
-        return -_logmeanexp(aggregated_likelihoods, dim=1, ignore_negative_inf=True)
-
+        entropies = []
+        for num_sample in range(num_samples):
+            max_num_semantic_ids = semantic_set_ids[num_sample].max().item() + 1
+            aggregated_likelihoods = torch.log(torch.zeros((max_num_semantic_ids,)))
+            for semantic_set_id in torch.unique(semantic_set_ids[num_sample]):
+                temp = torch.where(semantic_set_ids[num_sample] == semantic_set_id, log_likelihoods[num_sample], -torch.inf)
+                aggregated_likelihoods[semantic_set_id] = torch.logsumexp(temp, 0)
+            aggregated_likelihoods = aggregated_likelihoods - llh_shift
+            entropy = - torch.sum(aggregated_likelihoods) / torch.tensor(aggregated_likelihoods.shape[0])
+            entropies.append(entropy)
+        return entropies
 
         
