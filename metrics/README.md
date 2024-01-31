@@ -12,7 +12,7 @@
 - AUPRC-Negative: Area under the Precision-Recall Curve to identify incorrect samples
 
 ## Calibration metrics:
-- **Our new metrics**
+- **Our new metric**
 - ADPE: Adaptive debiased estimate for squared ECE
 - **Baselines**
 - PE: Plug-in estimate for ECE

@@ -43,13 +43,16 @@ def adaptive_ece_est(confidences, labels):
 class ECE_estimate():
 
     def __init__(self, metric_name='ADPE'):
+        self.metric_name = metric_name
+        if metric_name not in ['PE', 'PE2', 'DPE', 'ADPE']:
+            raise ValueError("Please specify a valid calibration metric!")
         self.metric = {'PE': lambda c, y, B: plugin_ece_est(c, y, B, 1, False),\
-                            'PE2': lambda c, y, B: plugin_ece_est(c, y, B, 2, False),\
-                            'DPE': lambda c, y, B: plugin_ece_est(c, y, B, 2, True),\
-                            'ADPE': lambda c, y: adaptive_ece_est(c, y)}[metric_name]
+                        'PE2': lambda c, y, B: plugin_ece_est(c, y, B, 2, False),\
+                        'DPE': lambda c, y, B: plugin_ece_est(c, y, B, 2, True),\
+                        'ADPE': lambda c, y: adaptive_ece_est(c, y)}[metric_name]
 
     def __call__(self, confidences, labels, num_bins=None):
-        if self.metric == 'ADPE':
-           return self.metric(confidences, labels)
+        if self.metric_name == 'ADPE':
+            return self.metric(confidences, labels)
         else:
-           return self.metric(confidences, labels, num_bins)
+            return self.metric(confidences, labels, num_bins)
