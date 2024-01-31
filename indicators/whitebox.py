@@ -1,7 +1,9 @@
 import torch
 import functools
-from models.opensource import NLIModel, TextGenerationModel
 from collections import defaultdict
+from evaluate import load
+from models.opensource import NLIModel, TextGenerationModel
+
 
 CONTRADICT, NEUTRAL, AGREE = 0, 1, 2
 llh_shift = torch.tensor(5.0)
@@ -62,16 +64,6 @@ def get_neg_loglikelihoods(model, tokenizer, sequences):
         result.append(result_dict)
 
     return result
-
-# def _logmeanexp(x, dim, ignore_negative_inf=False):
-#     if ignore_negative_inf:
-#         cnt = (x > -torch.inf).sum(dim)
-#     else:
-#         cnt = torch.tensor(x.shape[dim])
-#     return torch.logsumexp(x, dim=dim) - torch.log(cnt)
-#     entropy = - torch.sum(aggregated_likelihoods, dim=0) / torch.tensor(aggregated_likelihoods.shape[0])
-#         entropies.append(entropy)
-#     return 
     
 class WhiteBox():
 
@@ -151,4 +143,32 @@ class SemanticEntropy(WhiteBox):
             entropies.append(entropy)
         return entropies
 
-        
+class PerplexityScore(WhiteBox):
+    def __init__(self, model):
+        self.perplexity = load("perplexity", module_type="metric")
+        self.model = model
+    
+    def compute(self, generateds):
+        gen_texts = [[TextGenerationModel.clean_generation(gen['generated_text']) for gen in generated] for generated in generateds]
+        results = []
+        for gen_text in gen_texts:
+            result = self.perplexity.compute(predictions=gen_text, model_id=self.model)
+            results.append(result)
+        return results
+
+class GenerationProbability(WhiteBox):
+    def __init__(self, model, tokenizer):
+        self.model = model
+        self.tokenizer = tokenizer
+        self.device = model.device
+    
+    def compute(self, prompts, generateds):
+        gen_texts = [[TextGenerationModel.clean_generation(gen['generated_text']) for gen in generated] for generated in generateds]
+        self.sequences = [{
+            'prompt': torch.tensor(self.tokenizer.encode(prompt)).to(self.device),
+            'generations': torch.tensor(self.tokenizer(gen_text, padding='longest')['input_ids']).to(self.device),
+            'id': 0
+        } for prompt, gen_text in zip(prompts, gen_texts)]
+        results = get_neg_loglikelihoods(self.model, self.tokenizer, self.sequences)
+        return results
+    

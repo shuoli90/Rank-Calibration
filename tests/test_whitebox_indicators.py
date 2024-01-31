@@ -12,12 +12,19 @@ if __name__ == '__main__':
     prompts = ['Once upon a time', 'when the sun rises']
     generateds = pipe.generate(prompts, max_length=50, num_return_sequences=5, do_sample=True)
     most_likely_generations = pipe.generate(prompts, max_length=50, num_return_sequences=1, do_sample=False)
+    
+    # semantic entropy
     se = whitebox.SemanticEntropy(
-        prompts=prompts, 
-        generateds=generateds, 
-        most_likely_generations=most_likely_generations, 
-        model=pipe.model, 
-        tokenizer=pipe.tokenizer, device='cuda')
-    similarities = se.similarities
-    neg_log_likelihoods = se.neg_log_likelihoods
+            prompts=prompts, 
+            generateds=generateds, 
+            model=pipe.model, 
+            tokenizer=pipe.tokenizer, device='cuda')
     entropy = se.compute_scores(normalize=True)
+
+    # perplexity score
+    Perplexity = whitebox.PerplexityScore(model="facebook/opt-350m")
+    perplexities = Perplexity.compute(generateds)
+    
+    # generation probability
+    GenerationProbability = whitebox.GenerationProbability(model=pipe.model, tokenizer=pipe.tokenizer)
+    probabilities = GenerationProbability.compute(prompts, generateds)
