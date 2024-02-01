@@ -23,8 +23,8 @@ if __name__ == '__main__':
 
     # perplexity score
     Perplexity = whitebox.PerplexityScore(model="facebook/opt-350m")
-    perplexities = Perplexity.compute(generateds)
+    perplexities = Perplexity.compute_scores(generateds)
     
     # generation probability
     GenerationProbability = whitebox.GenerationProbability(model=pipe.model, tokenizer=pipe.tokenizer)
-    probabilities = GenerationProbability.compute(prompts, generateds)
+    probabilities = GenerationProbability.compute_scores(prompts, generateds)

@@ -4,7 +4,6 @@ from collections import defaultdict
 from evaluate import load
 from models.opensource import NLIModel, TextGenerationModel
 
-
 CONTRADICT, NEUTRAL, AGREE = 0, 1, 2
 llh_shift = torch.tensor(5.0)
 
@@ -16,10 +15,7 @@ def get_neg_loglikelihoods(model, tokenizer, sequences):
     for sample in sequences:
         result_dict = {}
         prompt = sample['prompt']
-        if 'cleaned_generations' in sample:
-            generations = sample['cleaned_generations'].to(device)
-        else:
-            generations = sample['generations'].to(device)
+        generations = sample['generations'].to(device)
         id_ = sample['id']
 
         average_neg_log_likelihoods = torch.zeros((generations.shape[0],))
@@ -31,21 +27,25 @@ def get_neg_loglikelihoods(model, tokenizer, sequences):
         for generation_index in range(generations.shape[0]):
             prompt = prompt[prompt != tokenizer.pad_token_id]
             generation = generations[generation_index][generations[generation_index] != tokenizer.pad_token_id]
-            target_ids = generation.clone()
-            model_output = model(torch.reshape(generation, (1, -1)), labels=target_ids, output_hidden_states=True)
             generation_only = generation.clone()
             unconditioned_model_output = model(torch.reshape(generation_only, (1, -1)),
                                                 labels=generation_only,
                                                 output_hidden_states=True)
+
+            # concatenate the prompt and the generation tokens
+            generation = torch.cat((prompt, generation[1:]))
+            target_ids = generation.clone()
+            target_ids[:len(prompt)] = -100
+            model_output = model(torch.reshape(generation, (1, -1)), labels=target_ids, output_hidden_states=True)  
             hidden_states = model_output['hidden_states']
             average_neg_log_likelihood = model_output['loss']
 
             average_unconditioned_neg_log_likelihood = unconditioned_model_output['loss']
             average_neg_log_likelihoods[generation_index] = average_neg_log_likelihood
             average_unconditioned_neg_log_likelihoods[generation_index] = average_unconditioned_neg_log_likelihood
-            neg_log_likelihoods[generation_index] = average_neg_log_likelihood * (len(generation) - len(prompt))
-            neg_unconditioned_log_likelihoods[generation_index] = average_unconditioned_neg_log_likelihood * (
-                len(generation) - len(prompt))
+            # neg_log_likelihoods[generation_index] = average_neg_log_likelihood * (len(generation) - len(prompt))
+            neg_log_likelihoods[generation_index] = average_neg_log_likelihood * len(generation)
+            neg_unconditioned_log_likelihoods[generation_index] = average_unconditioned_neg_log_likelihood * len(generation)
             pointwise_mutual_information[generation_index] = -neg_log_likelihoods[
                 generation_index] + neg_unconditioned_log_likelihoods[generation_index]
 
@@ -68,9 +68,9 @@ def get_neg_loglikelihoods(model, tokenizer, sequences):
 class WhiteBox():
 
     def __init__(self):
-        pass
+        return NotImplementedError
 
-    def similarities(self):
+    def compute_scores(self):
         return NotImplementedError
 
 
@@ -130,13 +130,14 @@ class SemanticEntropy(WhiteBox):
         log_likelihoods = log_likelihoods.to(self.device)
         semantic_set_ids = torch.tensor(self.semantic_ids, device=self.device)
         num_samples = log_likelihoods.shape[0]
-
         entropies = []
         for num_sample in range(num_samples):
-            max_num_semantic_ids = semantic_set_ids[num_sample].max().item() + 1
+            semantic_set_ids_tmp = semantic_set_ids[num_sample][~torch.isnan(log_likelihoods[num_sample])]
+            log_likelihoods_tmp = log_likelihoods[num_sample][~torch.isnan(log_likelihoods[num_sample])]
+            max_num_semantic_ids = semantic_set_ids_tmp.max().item() + 1
             aggregated_likelihoods = torch.log(torch.zeros((max_num_semantic_ids,)))
             for semantic_set_id in torch.unique(semantic_set_ids[num_sample]):
-                temp = torch.where(semantic_set_ids[num_sample] == semantic_set_id, log_likelihoods[num_sample], -torch.inf)
+                temp = torch.where(semantic_set_ids_tmp == semantic_set_id, log_likelihoods_tmp, -torch.inf)
                 aggregated_likelihoods[semantic_set_id] = torch.logsumexp(temp, 0)
             aggregated_likelihoods = aggregated_likelihoods - llh_shift
             entropy = - torch.sum(aggregated_likelihoods) / torch.tensor(aggregated_likelihoods.shape[0])
@@ -144,11 +145,11 @@ class SemanticEntropy(WhiteBox):
         return entropies
 
 class PerplexityScore(WhiteBox):
-    def __init__(self, model):
-        self.perplexity = load("perplexity", module_type="metric")
-        self.model = model
+    def __init__(self, model, tokenizer):
+        max_length = model.config.n_positions
+
     
-    def compute(self, generateds):
+    def compute_scores(self, generateds):
         gen_texts = [[TextGenerationModel.clean_generation(gen['generated_text']) for gen in generated] for generated in generateds]
         results = []
         for gen_text in gen_texts:
@@ -162,7 +163,7 @@ class GenerationProbability(WhiteBox):
         self.tokenizer = tokenizer
         self.device = model.device
     
-    def compute(self, prompts, generateds):
+    def compute_scores(self, prompts, generateds):
         gen_texts = [[TextGenerationModel.clean_generation(gen['generated_text']) for gen in generated] for generated in generateds]
         self.sequences = [{
             'prompt': torch.tensor(self.tokenizer.encode(prompt)).to(self.device),
