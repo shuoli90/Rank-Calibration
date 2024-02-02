@@ -90,7 +90,7 @@ if __name__ == '__main__':
     # model name 
     model = args.model.split('/')[-1]
     # save results to csv
-    # df.to_csv(f'../tmp/calibrate_{model}_{args.indicator}.csv', index=False)
+    df.to_csv(f'../tmp/calibrate_{model}_{args.indicator}.csv', index=False)
 
     print("----------------------------------")
     logging.log(logging.INFO, f"Results saved to ../tmp/calibrate_{model}_{args.indicator}.csv")
