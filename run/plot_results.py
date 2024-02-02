@@ -28,6 +28,8 @@ if __name__ == '__main__':
         else:
             confidence = df['confidence'].to_numpy()
         thresholds = np.linspace(np.min(correctness)+epsilon, np.max(correctness)-epsilon, 10)
-        ax = make_plots.AUROC_vs_Correctness(correctness, confidence, thresholds, ax=ax, label="_".join(file_name.split('_')[1:]))
+        label = "_".join(file_name.split('_')[1:])
+        label = label.split('.')[0]
+        ax = make_plots.AUROC_vs_Correctness(correctness, confidence, thresholds, ax=ax, label=label)
     ax.set_title('AUROC vs Correctness Threshold')
     ax.figure.savefig('../tmp/auroc_vs_correctness.png')
