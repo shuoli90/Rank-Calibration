@@ -48,10 +48,21 @@ if __name__ == '__main__':
     dataset = NQ_Open.get_dataset()
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=False)
 
+    if args.indicator == 'semantic_entropy':
+        se = whitebox.SemanticEntropy(
+            model=pipe.model, 
+            tokenizer=pipe.tokenizer, device='cuda')
+    elif args.indicator == 'perplexity':
+        Perplexity = whitebox.PerplexityScore(model=args.model)
+    elif args.indicator == 'generation_probability':
+        GenerationProbability = whitebox.GenerationProbability(model=pipe.model, tokenizer=pipe.tokenizer)
+    else:
+        raise ValueError(f"Indicator {args.indicator} not supported")
+    
     # collect generation and check correctness
     results = []
     for idx, batch in tqdm(enumerate(dataloader), total=len(dataloader)):
-        if idx > 100:
+        if idx > 50:
             break
         prompts = batch['prompt']
         generated = pipe.generate(prompts, max_length=50, do_sample=False, return_full_text=False)[0]
@@ -62,19 +73,12 @@ if __name__ == '__main__':
         generateds = pipe.generate(prompts, max_length=50, num_return_sequences=30, do_sample=True, return_full_text=False)
         
         if args.indicator == 'semantic_entropy':
-            se = whitebox.SemanticEntropy(
-                prompts=prompts, 
-                generateds=generateds, 
-                model=pipe.model, 
-                tokenizer=pipe.tokenizer, device='cuda')
-            entropy = se.compute_scores(normalize=True)
+            entropy = se.compute_scores(prompts, generateds, normalize=True)
             result['confidence'] = entropy[0].item()
         elif args.indicator == 'perplexity':
-            Perplexity = whitebox.PerplexityScore(model=args.model)
             perplexities = Perplexity.compute_scores(generateds)
             result['confidence'] = perplexities[0]['mean_perplexity'].item()
         elif args.indicator == 'generation_probability':
-            GenerationProbability = whitebox.GenerationProbability(model=pipe.model, tokenizer=pipe.tokenizer)
             probabilities = GenerationProbability.compute_scores(prompts, [generated])
             result['confidence'] = -probabilities[0]['average_neg_log_likelihoods'].item()
         else:
@@ -86,8 +90,8 @@ if __name__ == '__main__':
     # model name 
     model = args.model.split('/')[-1]
     # save results to csv
-    df.to_csv(f'../tmp/calibrate_{model}_{args.indicator}.csv', index=False)
+    # df.to_csv(f'../tmp/calibrate_{model}_{args.indicator}.csv', index=False)
 
     print("----------------------------------")
-    logging.log(logging.INFO, f"Results saved to ../tmp/calibrate.csv")
+    logging.log(logging.INFO, f"Results saved to ../tmp/calibrate_{model}_{args.indicator}.csv")
     print("----------------------------------")

@@ -21,9 +21,14 @@ class TextGenerationModel:
     
     @classmethod
     def clean_generation(cls, generation):
-        # return string before the first "\n" character
-        idx = np.char.find(generation, "\n", start=0, end=None)
-        return generation.strip() if idx == -1 else generation[:idx].strip()
+        strings_to_filter_on = [
+                    '.', '\n', 'Q:', 'A:', 'question:', 'answer:', 'Question:', 'Answer:', 'Questions:', 'questions:', 'QUESTION:',
+                    'ANSWER:'
+                ]
+        for string in strings_to_filter_on:
+            if string in generation:
+                generation = generation.split(string)[0]
+        return generation.strip()
 
 class NLIModel:
     

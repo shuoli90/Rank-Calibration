@@ -9,9 +9,11 @@ def AUROC_vs_Correctness(correctness, confidence, thresholds, ax, **kwargs):
     for threshold in thresholds:
         y_true = correctness >= threshold
         y_score = confidence
-        auroc = roc_auc_score(y_true, y_score)
-        # auroc = max(auroc, 1-auroc)
-        aurocs.append(auroc)
+        try:
+            auroc = roc_auc_score(y_true, y_score)
+            aurocs.append(auroc)
+        except ValueError:
+            breakpoint()
     # plot
     df = pd.DataFrame(dict(AUROC=aurocs, Correctness=thresholds))
     sns.lineplot(x="Correctness", y="AUROC", data=df, ax=ax, **kwargs)

@@ -15,7 +15,7 @@ class NQ_Open:
             # https://github.com/zlin7/UQ-NLG
             all_answers = example.pop('answer')
             example['answer'] = all_answers
-            example['prompt'] = 'Question: ' + example['question'] + '? [SEP] '+ 'Answer:'
+            example['prompt'] = 'Question: ' + example['question'] + ' Answer:'
             inputs = self.tokenizer(example['prompt'], padding=False, truncation=False)
             outputs = self.tokenizer(all_answers[0], padding=False, truncation=False)
             example['input_ids'] = inputs['input_ids']
