@@ -138,6 +138,7 @@ class SemanticEntropy(WhiteBox):
             aggregated_likelihoods = torch.log(torch.zeros((max_num_semantic_ids,)))
             for semantic_set_id in torch.unique(semantic_set_ids[num_sample]):
                 temp = torch.where(semantic_set_ids_tmp == semantic_set_id, log_likelihoods_tmp, -torch.inf)
+                print('The shape of the input is: ', temp.shape, '\n')
                 aggregated_likelihoods[semantic_set_id] = torch.logsumexp(temp, 0)
             aggregated_likelihoods = aggregated_likelihoods - llh_shift
             entropy = - torch.sum(aggregated_likelihoods) / torch.tensor(aggregated_likelihoods.shape[0])

@@ -10,13 +10,14 @@ import pandas as pd
 from tqdm import tqdm
 import logging
 from tasks import factoid
-from models import opensource, gpt
+from models import opensource
 from metrics import correctness
 from indicators import whitebox
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', type=str, default='meta-llama/Llama-2-7b-hf')
+    # parser.add_argument('--model', type=str, default='Llama-2-7b-hf')
     parser.add_argument('--dataset', type=str, default='nq-open')
     parser.add_argument('--split', type=str, default='validation')
     parser.add_argument('--correctness', type=str, default='rouge')
@@ -24,6 +25,7 @@ if __name__ == '__main__':
     parser.add_argument('--mode', type=str, default='rouge1')
     parser.add_argument('--indicator', type=str, default='semantic_entropy')
     parser.add_argument('--seed', type=int, default=42)
+    parser.add_argument('--task', type=str, default='text-generation')
     args = parser.parse_args()
 
     print("----------------------------------")
@@ -51,7 +53,7 @@ if __name__ == '__main__':
     # collect generation and check correctness
     results = []
     for idx, batch in tqdm(enumerate(dataloader), total=len(dataloader)):
-        if idx > 100:
+        if idx > 5:
             break
         prompts = batch['prompt']
         generated = pipe.generate(prompts, max_length=50, do_sample=False, return_full_text=False)[0]
@@ -78,7 +80,7 @@ if __name__ == '__main__':
             probabilities = GenerationProbability.compute_scores(prompts, [generated])
             result['confidence'] = -probabilities[0]['average_neg_log_likelihoods'].item()
         else:
-            raise ValueError(f"Indicator {args.indicator} not supported")
+            raise ValueError(f"Indicator {args.indicator} not supported.")
         results.append(result)
     
     # generate pandas dataframe from results
@@ -86,7 +88,7 @@ if __name__ == '__main__':
     # model name 
     model = args.model.split('/')[-1]
     # save results to csv
-    df.to_csv(f'../tmp/calibrate_{model}_{args.indicator}.csv', index=False)
+    df.to_csv(f'tmp/calibrate_{model}_{args.indicator}.csv', index=False)
 
     print("----------------------------------")
     logging.log(logging.INFO, f"Results saved to ../tmp/calibrate.csv")
