@@ -7,7 +7,6 @@ from models import opensource, gpt
 from transformers import AutoTokenizer
 
 if __name__ == '__main__':
-<<<<<<< HEAD
     # prompt = "Once upon a time:"
     # demos = ['90%: confident', '75: probably', '10%: very unlikely']
     # demons = blackbox.demo_perturb(demos)
@@ -42,7 +41,6 @@ if __name__ == '__main__':
     hb = blackbox.Hybrid(model=model)
     output = hb.compute_scores(prompt, gen_text)
     print(output)
-=======
     prompt = "Once upon a time:"
     demos = ['90%: confident', '75: probably', '10%: very unlikely']
     demons = blackbox.demo_perturb(demos)
@@ -55,4 +53,3 @@ if __name__ == '__main__':
     nlimodel = opensource.NLIModel(device='cuda')
     sc = blackbox.SemanticConsistency(nlimodel)
     sc_score = sc(prompt, [generations])
->>>>>>> 5406a7ea976aca9aefd5080376f142d20c9682d8
