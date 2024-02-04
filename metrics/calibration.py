@@ -56,3 +56,17 @@ class ECE_estimate():
             return self.metric(confidences, labels)
         else:
             return self.metric(confidences, labels, num_bins)
+
+def AUARC(confidences, labels):
+  thresholds = np.arange(0, 1, 0.01)
+  if type(confidences) is not np.ndarray:
+    confidences = np.array(confidences)
+  if type(labels) is not np.ndarray:
+    labels = np.array(labels)
+  # normalize the confidences
+  confidences = (confidences - confidences.min()) / (confidences.max() - confidences.min())
+  arcs = []
+  for threshold in thresholds:
+    correct = np.mean(labels[confidences >= threshold])
+    arcs.append(correct)
+  return np.trapz(arcs, thresholds)
