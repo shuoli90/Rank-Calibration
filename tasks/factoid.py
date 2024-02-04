@@ -9,13 +9,13 @@ class NQ_Open:
         self.dataset = datasets.load_dataset('nq_open', split=split)
         self.tokenizer = tokenizer
     
-    def get_dataset(self):
+    def get_dataset(self, add_prompt=None):
 
         def process_instance(example):
             # https://github.com/zlin7/UQ-NLG
             all_answers = example.pop('answer')
             example['answer'] = all_answers
-            example['prompt'] = 'Question: ' + example['question'] + '? [SEP] '+ 'Answer:'
+            example['prompt'] = 'Question: ' + example['question'] + ' Answer:'
             inputs = self.tokenizer(example['prompt'], padding=False, truncation=False)
             outputs = self.tokenizer(all_answers[0], padding=False, truncation=False)
             example['input_ids'] = inputs['input_ids']

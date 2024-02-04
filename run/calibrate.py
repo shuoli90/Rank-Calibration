@@ -12,12 +12,12 @@ import logging
 from tasks import factoid
 from models import opensource
 from metrics import correctness
-from indicators import whitebox
+from indicators import whitebox, blackbox
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', type=str, default='meta-llama/Llama-2-7b-hf')
-    # parser.add_argument('--model', type=str, default='Llama-2-7b-hf')
+    # parser.add_argument('--model', type=str, default='meta-llama/Llama-2-7b-hf')
+    parser.add_argument('--model', type=str, default='facebook/opt-350m')
     parser.add_argument('--dataset', type=str, default='nq-open')
     parser.add_argument('--split', type=str, default='validation')
     parser.add_argument('--correctness', type=str, default='rouge')
@@ -50,10 +50,23 @@ if __name__ == '__main__':
     dataset = NQ_Open.get_dataset()
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=False)
 
+    if args.indicator == 'semantic_entropy':
+        se = whitebox.SemanticEntropy(
+            model=pipe.model, 
+            tokenizer=pipe.tokenizer, device='cuda')
+    elif args.indicator == 'perplexity':
+        Perplexity = whitebox.PerplexityScore(model=args.model)
+    elif args.indicator == 'generation_probability':
+        GenerationProbability = whitebox.GenerationProbability(model=pipe.model, tokenizer=pipe.tokenizer)
+    elif args.indicator == 'self_consistency':
+        SC =  blackbox.SelfConsistency(pipe=pipe)
+    else:
+        raise ValueError(f"Indicator {args.indicator} not supported")
+    
     # collect generation and check correctness
     results = []
     for idx, batch in tqdm(enumerate(dataloader), total=len(dataloader)):
-        if idx > 5:
+        if idx > 3:
             break
         prompts = batch['prompt']
         generated = pipe.generate(prompts, max_length=50, do_sample=False, return_full_text=False)[0]
@@ -64,21 +77,16 @@ if __name__ == '__main__':
         generateds = pipe.generate(prompts, max_length=50, num_return_sequences=30, do_sample=True, return_full_text=False)
         
         if args.indicator == 'semantic_entropy':
-            se = whitebox.SemanticEntropy(
-                prompts=prompts, 
-                generateds=generateds, 
-                model=pipe.model, 
-                tokenizer=pipe.tokenizer, device='cuda')
-            entropy = se.compute_scores(normalize=True)
+            entropy = se.compute_scores(prompts, generateds, normalize=True)
             result['confidence'] = entropy[0].item()
         elif args.indicator == 'perplexity':
-            Perplexity = whitebox.PerplexityScore(model=args.model)
             perplexities = Perplexity.compute_scores(generateds)
             result['confidence'] = perplexities[0]['mean_perplexity'].item()
         elif args.indicator == 'generation_probability':
-            GenerationProbability = whitebox.GenerationProbability(model=pipe.model, tokenizer=pipe.tokenizer)
             probabilities = GenerationProbability.compute_scores(prompts, [generated])
             result['confidence'] = -probabilities[0]['average_neg_log_likelihoods'].item()
+        # elif args.indicator == 'self_consistency':
+            # to be adjusted to generateds
         else:
             raise ValueError(f"Indicator {args.indicator} not supported.")
         results.append(result)
@@ -91,5 +99,5 @@ if __name__ == '__main__':
     df.to_csv(f'tmp/calibrate_{model}_{args.indicator}.csv', index=False)
 
     print("----------------------------------")
-    logging.log(logging.INFO, f"Results saved to ../tmp/calibrate.csv")
+    logging.log(logging.INFO, f"Results saved to ../tmp/calibrate_{model}_{args.indicator}.csv")
     print("----------------------------------")

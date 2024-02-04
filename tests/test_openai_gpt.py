@@ -5,5 +5,7 @@ import torch
 from models import gpt
 
 if __name__ == '__main__':
-    prompts = ['Once upon a time']
-    responses = gpt.generate(prompts, model="gpt-3.5-turbo-0613", max_tokens=50, n=1)
+    prompts = ['Question: '+"Who is the 46th president of the United States?" + ' Answer:']
+    model = gpt.GPTModel()
+    responses = model.generate(prompts, max_tokens=50, n=1)
+    print(responses)

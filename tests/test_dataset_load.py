@@ -6,7 +6,7 @@ from tasks import factoid
 from transformers import AutoTokenizer
 
 if __name__ == '__main__':
-    tokenizer = AutoTokenizer.from_pretrained('../LLM/llama2/Llama-2-7b-hf')
+    tokenizer = AutoTokenizer.from_pretrained('meta-llama/Llama-2-7b-hf')
     nq_open = factoid.NQ_Open(tokenizer, split='validation')
 
     nq_open.get_dataset()

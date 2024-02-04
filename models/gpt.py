@@ -14,7 +14,7 @@ dotenv_path = Path('.env')
 load_dotenv(dotenv_path=dotenv_path)
 
 client = OpenAI(
-    api_key=os.getenv('OPENAI_API_KEY'),
+    api_key=os.getenv('YOU_OPENAI_API_KEY'),
 )
 
 def chat_gpt(prompt):
@@ -29,22 +29,24 @@ def chatcompletions_with_backoff(model, messages, n, **kwargs):
     return client.chat.completions.create(
         model=model, 
         messages=messages,
-        n=n,)
+        n=n,
+        **kwargs)
+
 class GPTModel:
 
-    def __init__(self, model_name="gpt-3.5-turbo-0613", num_return_sequences=1, **kwargs):
+    def __init__(self, model_name="gpt-3.5-turbo-0613",**kwargs):
         self.model_name = model_name
         self.tokenizer = AutoTokenizer.from_pretrained("openai-gpt")
-        self.num_return_sequences = num_return_sequences
 
-    def generate(self, prompts, **kwargs):
+    def generate(self, prompts, num_return_sequences=1, **kwargs):
 
         messages = [{"role": "user",
                     "content": prompt} for prompt in prompts]
         response = chatcompletions_with_backoff(
             model=self.model_name,
             messages=messages,
-            n=self.num_return_sequences,
+            n=num_return_sequences,
+            # **kwargs # to be refined
         )
         responses = [{'generated_text': choice.message.content.strip()}
                 for choice

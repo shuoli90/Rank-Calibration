@@ -1,0 +1,2 @@
+CUDA_VISIBLE_DEVICES=6,7 python ../run/calibrate.py --model meta-llama/Llama-2-7b-chat-hf
+CUDA_VISIBLE_DEVICES=6,7 python ../run/calibrate.py --model meta-llama/Llama-2-7b-chat-hf --indicator "generation_probability"

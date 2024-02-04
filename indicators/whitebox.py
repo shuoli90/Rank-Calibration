@@ -64,6 +64,14 @@ def get_neg_loglikelihoods(model, tokenizer, sequences):
         result.append(result_dict)
 
     return result
+
+# whitebox methods
+def _logmeanexp(x, dim, ignore_negative_inf=False):
+    if ignore_negative_inf:
+        cnt = (x > -torch.inf).sum(dim)
+    else:
+        cnt = torch.tensor(x.shape[dim])
+    return torch.logsumexp(x, dim=dim) - torch.log(cnt)
     
 class WhiteBox():
 
@@ -76,23 +84,15 @@ class WhiteBox():
 
 class SemanticEntropy(WhiteBox):
 
-    def __init__(self, prompts, generateds, model, tokenizer, device='cuda'):
+    def __init__(self, model, tokenizer, device='cuda'):
         self.device = device if device is not None else torch.device('cpu')
         self.similarity_model = NLIModel(device=self.device)
         self.mem = defaultdict(dict)
         self.model = model
         self.tokenizer = tokenizer
-        gen_texts = [[TextGenerationModel.clean_generation(gen['generated_text']) for gen in generated] for generated in generateds]
-        self.sequences = [{
-            'prompt': torch.tensor(tokenizer.encode(prompt)).to(self.device),
-            'generations': torch.tensor(tokenizer(gen_text, padding='longest')['input_ids']).to(self.device),
-            'id': 0
-        } for prompt, gen_text in zip(prompts, gen_texts)]
-        self.generations = [{'question':prompt, 'answers':gen_text} for prompt, gen_text in zip(prompts, gen_texts)]
 
-    @functools.cached_property
-    def similarities(self):
-        sims = [self.similarity_model.classify(g['question'], g['answers']) for g in self.generations]
+    def similarities(self, generations):
+        sims = [self.similarity_model.classify(g['question'], g['answers']) for g in generations]
         return sims
     
     def _create_semantic_sets(self, sample):
@@ -115,33 +115,40 @@ class SemanticEntropy(WhiteBox):
             ret.append(_map[ans])
         return ret
     
-    @functools.cached_property
-    def neg_log_likelihoods(self):
-        return get_neg_loglikelihoods(self.model, self.tokenizer, self.sequences)
+    # @functools.cached_property
+    def neg_log_likelihoods(self, sequences):
+        return get_neg_loglikelihoods(self.model, self.tokenizer, sequences)
     
-    @functools.cached_property
-    def semantic_ids(self):
-        return [self._create_semantic_sets(s) for s in self.similarities]
+    # @functools.cached_property
+    def semantic_ids(self, generations):
+        return torch.tensor([self._create_semantic_sets(s) for s in self.similarities(generations)]).to(self.device)
     
-    def compute_scores(self, normalize=True):
+    def compute_scores(self, prompts, generateds, normalize=True):
         # https://github.com/lorenzkuhn/semantic_uncertainty
-        # https://github.com/zlin7/UQ-NLG
-        log_likelihoods = -torch.stack([s['average_neg_log_likelihoods'] for s in self.neg_log_likelihoods]) if normalize else -torch.stack([s['neg_log_likelihoods'] for s in self.neg_log_likelihoods])
+        gen_texts = [[TextGenerationModel.clean_generation(gen['generated_text']) for gen in generated] for generated in generateds]
+        sequences = [{
+            'prompt': torch.tensor(self.tokenizer.encode(prompt)).to(self.device),
+            'generations': torch.tensor(self.tokenizer(gen_text, padding='longest')['input_ids']).to(self.device),
+            'id': 0
+        } for prompt, gen_text in zip(prompts, gen_texts)]
+        generations = [{'question':prompt, 'answers':gen_text} for prompt, gen_text in zip(prompts, gen_texts)]
+
+        neg_log_likelihoods = self.neg_log_likelihoods(sequences)
+        semantic_set_ids = self.semantic_ids(generations)
+
+        log_likelihoods = -torch.stack([s['average_neg_log_likelihoods'] for s in neg_log_likelihoods]) if normalize else -torch.stack([s['neg_log_likelihoods'] for s in neg_log_likelihoods])
         log_likelihoods = log_likelihoods.to(self.device)
-        semantic_set_ids = torch.tensor(self.semantic_ids, device=self.device)
         num_samples = log_likelihoods.shape[0]
         entropies = []
         for num_sample in range(num_samples):
             semantic_set_ids_tmp = semantic_set_ids[num_sample][~torch.isnan(log_likelihoods[num_sample])]
             log_likelihoods_tmp = log_likelihoods[num_sample][~torch.isnan(log_likelihoods[num_sample])]
-            max_num_semantic_ids = semantic_set_ids_tmp.max().item() + 1
-            aggregated_likelihoods = torch.log(torch.zeros((max_num_semantic_ids,)))
-            for semantic_set_id in torch.unique(semantic_set_ids[num_sample]):
-                temp = torch.where(semantic_set_ids_tmp == semantic_set_id, log_likelihoods_tmp, -torch.inf)
-                print('The shape of the input is: ', temp.shape, '\n')
-                aggregated_likelihoods[semantic_set_id] = torch.logsumexp(temp, 0)
-            aggregated_likelihoods = aggregated_likelihoods - llh_shift
-            entropy = - torch.sum(aggregated_likelihoods) / torch.tensor(aggregated_likelihoods.shape[0])
+            aggregated_log_likelihoods = []
+            for semantic_set_id in torch.unique(semantic_set_ids_tmp):
+                temp = log_likelihoods_tmp[semantic_set_ids_tmp == semantic_set_id]
+                aggregated_log_likelihoods.append(torch.logsumexp(temp, 0))
+            aggregated_log_likelihoods = torch.tensor(aggregated_log_likelihoods)
+            entropy = - torch.sum(aggregated_log_likelihoods, dim=0) / torch.tensor(aggregated_log_likelihoods.shape[0])
             entropies.append(entropy)
         return entropies
 
