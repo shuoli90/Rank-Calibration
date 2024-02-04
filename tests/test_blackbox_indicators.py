@@ -41,15 +41,3 @@ if __name__ == '__main__':
     hb = blackbox.Hybrid(model=model)
     output = hb.compute_scores(prompt, gen_text)
     print(output)
-    prompt = "Once upon a time:"
-    demos = ['90%: confident', '75: probably', '10%: very unlikely']
-    demons = blackbox.demo_perturb(demos)
-    prompts = [" ".join([*demo, prompt]) for demo in demons]
-
-    pipe = opensource.TextGenerationModel(model_name="facebook/opt-350m", torch_dtype=torch.bfloat16)
-    iclrobust = blackbox.ICLRobust(pipe=pipe, demo_transforms=blackbox.demo_perturb)
-    generations = iclrobust.generate(demos, prompt, max_length=50)
-    generations = [g[0]['generated_text'] for g in generations]
-    nlimodel = opensource.NLIModel(device='cuda')
-    sc = blackbox.SemanticConsistency(nlimodel)
-    sc_score = sc(prompt, [generations])

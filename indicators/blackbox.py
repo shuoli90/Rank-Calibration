@@ -148,7 +148,9 @@ class Verbalized(BlackBox):
         self.model = model
         self.tokenizer = self.pipe.tokenizer if self.pipe else self.model.tokenizer
         self.description1 = "Read the question and answer.\n"
-        self.description2 = "\nProvide a numeric confidence that indicates your certainty about this answer. For instance, if your confidence level is 80%, it means you are 80% certain that this answer is correct and there is a 20% chance that it is incorrect. Use the following format to provide your confidence: Confidence: [Your confidence, a numerical number in the range of 0-100]%."
+        self.description2 = "\nProvide a numeric confidence that indicates your certainty about this answer. \
+                            For instance, if your confidence level is 80%, it means you are 80% certain that this answer is correct and there is a 20% chance that it is incorrect. \
+                            Use the following format to provide your confidence: Confidence: [Your confidence, a numerical number in the range of 0-100]%."
 
     def extract_confidence(self, s):
         pattern = r'Confidence:\s*(\d+)%'
