@@ -19,9 +19,9 @@ if __name__ == '__main__':
 
     # pipe = opensource.TextGenerationModel(model_name="facebook/opt-350m", torch_dtype=torch.bfloat16)
 
-    # pipe = opensource.TextGenerationModel(model_name='meta-llama/Llama-2-7b-hf', torch_dtype=torch.bfloat16)
-    # generated = pipe.generate(prompt, max_length=50, do_sample=True, return_full_text=False)
-    # gen_text = opensource.TextGenerationModel.clean_generation(generated[0]['generated_text'])
+    pipe = opensource.TextGenerationModel(model_name='meta-llama/Llama-2-7b-hf', torch_dtype=torch.bfloat16)
+    generated = pipe.generate(prompt, max_length=50, do_sample=True, return_full_text=False)
+    gen_text = opensource.TextGenerationModel.clean_generation(generated[0]['generated_text'])
     # sc = blackbox.SelfConsistency(pipe=pipe)
     # output = sc.compute_scores(prompt, gen_text)
 

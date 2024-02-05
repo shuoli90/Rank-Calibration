@@ -64,6 +64,7 @@ def get_eig(L, thres=None, eps=None):
     if eps is not None:
         L = (1-eps) * L + eps * np.eye(len(L))
     eigvals, eigvecs = np.linalg.eigh(L)
+    breakpoint()
 
     #eigvals, eigvecs = np.linalg.eig(L)
     #assert np.max(np.abs(eigvals.imag)) < 1e-5

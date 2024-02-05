@@ -129,6 +129,18 @@ class Degree():
             ret = np.asarray([np.sum(1-_, axis=1) for _ in Ws])
             return ret.mean(1), ret
         
+
+class SpectralEigv():
+    def __init__(self, affinity_mode, temperature, adjust):
+        self.affinity_mode = affinity_mode
+        self.temperature = temperature
+        self.adjust = adjust
+    
+    def compute_scores(self, sim_mats):
+        clusterer = pc.SpetralClusteringFromLogits(affinity_mode=self.affinity_mode, eigv_threshold=None,
+                                                   cluster=False, temperature=self.temperature)
+        return [clusterer.get_eigvs(_).clip(0 if self.adjust else -1).sum() for _ in sim_mats]
+
 class SelfConsistency(BlackBox):
     def __init__(self, pipe, score_name='exact_match'):
         self.pipe = pipe

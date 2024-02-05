@@ -12,24 +12,24 @@ if __name__ == '__main__':
     nlimodel = opensource.NLIModel(device='cuda')
     sc = blackbox.SemanticConsistency(nlimodel)
     sc_mat = sc.similarity_mat("Once upon a time:", [generations])
-    
-    spectural = blackbox.spectral_projected(
-        eigv_threshold=0.5, 
-        affinity_mode='disagreement_w', 
-        temperature=1.0, 
-        sim_mats=sc_mat)
 
-    ecc = blackbox.Eccentricity(
-        eigv_threshold=0.5, 
-        affinity_mode='disagreement_w', 
-        temperature=1.0,)
-    _u, _c = ecc.compute_scores(sc_mat)
-    print(_u, _c)
+    # ecc = blackbox.Eccentricity(
+    #     eigv_threshold=0.5, 
+    #     affinity_mode='disagreement_w', 
+    #     temperature=1.0,)
+    # _u, _c = ecc.compute_scores(sc_mat)
+    # print(_u, _c)
 
-    deg = blackbox.Degree(
-        affinity_mode='disagreement_w', 
-        temperature=1.0)
-    _u, _c = deg.compute_scores(sc_mat)
-    print(_u, _c)
+    # deg = blackbox.Degree(
+    #     affinity_mode='disagreement_w', 
+    #     temperature=1.0)
+    # _u, _c = deg.compute_scores(sc_mat)
+    # print(_u, _c)
+
+    eigv = blackbox.SpectralEigv(
+        affinity_mode='disagreement_w',
+        temperature=1.0,
+        adjust=False)
+    result = eigv.compute_scores(sc_mat)
     breakpoint()
 
