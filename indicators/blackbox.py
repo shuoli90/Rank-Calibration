@@ -40,7 +40,7 @@ def jaccard_similarity(generations):
         rets.append(ret)
     return rets
 
-class SemanticConsistency():
+class SemanticConsistency(BlackBox):
     def __init__(self, similarity_model, device='cuda'):
         self.device = device if device is not None else torch.device('cpu')
         self.similarity_model = similarity_model
@@ -74,7 +74,7 @@ class SemanticConsistency():
         sims = [self.similarity_model.classify(prompt, g) for g in generations]
         return [s['sim_mat'] for s in sims]
 
-class ICLRobust():
+class ICLRobust(BlackBox):
     def __init__(self, pipe, demo_transforms=None):
         self.pipe = pipe
         self.demo_transforms = demo_transforms
@@ -92,7 +92,7 @@ class ICLRobust():
         generations = self.generate(demonstrations, prompt, **kwargs)
         return consistency_meansure(prompt, generations)
 
-class ReparaphraseRobust():
+class ReparaphraseRobust(BlackBox):
 
     def __init__(self, pipe, prompt_transforms=None):
         self.pipe = pipe
@@ -106,7 +106,7 @@ class ReparaphraseRobust():
         generations = [self.pipe.generate(prompt, **kwargs) for prompt in prompt_list]
         return generations
     
-class Eccentricity():
+class Eccentricity(BlackBox):
     
     def __init__(self, eigv_threshold, affinity_mode, temperature):
         self.eigv_threshold = eigv_threshold
@@ -118,7 +118,7 @@ class Eccentricity():
         ds = np.asarray([np.linalg.norm(x -x.mean(0)[None, :],2,axis=1) for x in projected])
         return np.linalg.norm(ds, 2,1), ds
 
-class Degree():
+class Degree(BlackBox):
         
         def __init__(self, affinity_mode, temperature):
             self.affinity_mode = affinity_mode

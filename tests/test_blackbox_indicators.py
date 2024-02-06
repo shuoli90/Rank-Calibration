@@ -34,10 +34,14 @@ if __name__ == '__main__':
     # output = vb.compute_scores(prompt, gen_text)
 
 
-    model = gpt.GPTModel()
-    generated = model.generate([prompt], max_tokens=50, num_return_sequences=1)
-    gen_text = opensource.TextGenerationModel.clean_generation(generated[0]['generated_text'])
+    # model = gpt.GPTModel()
+    # generated = model.generate([prompt], max_tokens=50, num_return_sequences=1)
+    # gen_text = opensource.TextGenerationModel.clean_generation(generated[0]['generated_text'])
     
-    hb = blackbox.Hybrid(model=model)
-    output = hb.compute_scores(prompt, gen_text)
-    print(output)
+    # hb = blackbox.Hybrid(model=model)
+    # output = hb.compute_scores(prompt, gen_text)
+    # print(output)
+
+    generations = [['hello 1', 'hello world 2', 'good morning', 'morning biden']]
+    sim = blackbox.jaccard_similarity(generations)
+    print(sim)
