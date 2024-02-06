@@ -40,7 +40,7 @@ def jaccard_similarity(generations):
         rets.append(ret)
     return rets
 
-class SemanticConsistency():
+class SemanticConsistency(BlackBox):
     def __init__(self, similarity_model, device='cuda'):
         self.device = device if device is not None else torch.device('cpu')
         self.similarity_model = similarity_model
@@ -74,7 +74,7 @@ class SemanticConsistency():
         sims = [self.similarity_model.classify(prompt, g) for g in generations]
         return [s['sim_mat'] for s in sims]
 
-class ICLRobust():
+class ICLRobust(BlackBox):
     def __init__(self, pipe, demo_transforms=None):
         self.pipe = pipe
         self.demo_transforms = demo_transforms
@@ -92,7 +92,7 @@ class ICLRobust():
         generations = self.generate(demonstrations, prompt, **kwargs)
         return consistency_meansure(prompt, generations)
 
-class ReparaphraseRobust():
+class ReparaphraseRobust(BlackBox):
 
     def __init__(self, pipe, prompt_transforms=None):
         self.pipe = pipe
@@ -105,8 +105,11 @@ class ReparaphraseRobust():
             prompt_list = [prompt]
         generations = [self.pipe.generate(prompt, **kwargs) for prompt in prompt_list]
         return generations
+
+    def compute_scores(self, consistency_meansure, prompt, **kwargs):
+        raise NotImplementedError
     
-class Eccentricity():
+class Eccentricity(BlackBox):
     
     def __init__(self, eigv_threshold, affinity_mode, temperature):
         self.eigv_threshold = eigv_threshold
@@ -118,7 +121,7 @@ class Eccentricity():
         ds = np.asarray([np.linalg.norm(x -x.mean(0)[None, :],2,axis=1) for x in projected])
         return np.linalg.norm(ds, 2,1), ds
 
-class Degree():
+class Degree(BlackBox):
         
         def __init__(self, affinity_mode, temperature):
             self.affinity_mode = affinity_mode
@@ -129,8 +132,7 @@ class Degree():
             ret = np.asarray([np.sum(1-_, axis=1) for _ in Ws])
             return ret.mean(1), ret
         
-
-class SpectralEigv():
+class SpectralEigv(BlackBox):
     def __init__(self, affinity_mode, temperature, adjust):
         self.affinity_mode = affinity_mode
         self.temperature = temperature
@@ -157,8 +159,9 @@ class SelfConsistency(BlackBox):
 class Verbalized(BlackBox):
     def __init__(self, pipe=None, model=None):
         self.pipe = pipe
-        self.model = model
-        self.tokenizer = self.pipe.tokenizer if self.pipe else self.model.tokenizer
+        # self.model = model
+        # self.tokenizer = self.pipe.tokenizer if self.pipe else self.model.tokenizer
+        self.tokenizer = self.pipe.tokenizer
         self.description1 = "Read the question and answer.\n"
         self.description2 = "\nProvide a numeric confidence that indicates your certainty about this answer. \
                             For instance, if your confidence level is 80%, it means you are 80% certain that this answer is correct and there is a 20% chance that it is incorrect. \
@@ -179,9 +182,6 @@ class Verbalized(BlackBox):
         cur_length = len(self.tokenizer(combo_text)['input_ids'])
         if self.pipe:
             verbal_conf = self.pipe.generate(combo_text, max_length=cur_length+10, return_full_text=False)[0]['generated_text']
-        elif self.model:
-            # for GPT APIs
-            verbal_conf = self.model.generate([combo_text], max_token=10)[0]['generated_text']
         else:
             raise ValueError("Please specify a valid pipeline or model!")
         return self.extract_confidence(verbal_conf)
@@ -189,23 +189,20 @@ class Verbalized(BlackBox):
 class Hybrid(BlackBox):
     # https://arxiv.org/pdf/2306.13063.pdf
     # use self consistency emsemble with verbalized confidences
-    def __init__(self, pipe=None, model=None, score_name='exact_match'):
+    def __init__(self, pipe=None, score_name='exact_match'):
         self.pipe = pipe
-        self.model = model
         self.score_name = score_name
         self.score = evaluate.load(score_name)
-        self.vb = Verbalized(pipe=pipe, model=model)
+        # self.vb = Verbalized(pipe=pipe, model=model)
+        self.vb = Verbalized(pipe=pipe)
 
     def compute_scores(self, prompt, gen_text, num_add_trials=5, **kwargs):
         # for a single (query, gen_text) pair
         gen_conf = self.vb.compute_scores(prompt, gen_text)
         if self.pipe:
             re_generateds = self.pipe.generate(prompt, num_return_sequences=num_add_trials, max_length=50, do_sample=True, return_full_text=False)
-        elif self.model:
-            # for GPT APIs
-            re_generateds = self.model.generate([prompt], num_return_sequences=num_add_trials, max_tokens=20)
         else:
-            raise ValueError("Please specify a valid pipeline or model!")
+            raise ValueError("Please specify a valid pipeline")
         
         re_gen_texts = [re_generated['generated_text'] for re_generated in re_generateds]
         re_gen_confs = [self.vb.compute_scores(prompt, re_gen_text) for re_gen_text in re_gen_texts]
