@@ -4,10 +4,10 @@ import evaluate
 import numpy as np
 from collections import defaultdict
 from itertools import permutations
-from models.opensource import TextGenerationModel
 import re
 import numpy as np
 import utils.clustering as pc
+from utils import text_processing 
 
 CONTRADICT, NEUTRAL, AGREE = 0, 1, 2
 
@@ -152,15 +152,13 @@ class SelfConsistency(BlackBox):
     def compute_scores(self, prompt, gen_text, num_add_trials=5, **kwargs):
         # for a single (query, gen_text) pair
         re_generateds = self.pipe.generate(prompt, num_return_sequences=num_add_trials, max_length=50, do_sample=True, return_full_text=False)
-        re_gen_texts = [TextGenerationModel.clean_generation(re_generated['generated_text']) for re_generated in re_generateds]
+        re_gen_texts = [text_processing.clean_generation(re_generated['generated_text']) for re_generated in re_generateds]
         scores = self.score.compute(references=[gen_text]*num_add_trials, predictions=re_gen_texts)[self.score_name]
         return np.mean(scores)
 
 class Verbalized(BlackBox):
     def __init__(self, pipe=None, model=None):
         self.pipe = pipe
-        # self.model = model
-        # self.tokenizer = self.pipe.tokenizer if self.pipe else self.model.tokenizer
         self.tokenizer = self.pipe.tokenizer
         self.description1 = "Read the question and answer.\n"
         self.description2 = "\nProvide a numeric confidence that indicates your certainty about this answer. \
@@ -193,7 +191,6 @@ class Hybrid(BlackBox):
         self.pipe = pipe
         self.score_name = score_name
         self.score = evaluate.load(score_name)
-        # self.vb = Verbalized(pipe=pipe, model=model)
         self.vb = Verbalized(pipe=pipe)
 
     def compute_scores(self, prompt, gen_text, num_add_trials=5, **kwargs):
