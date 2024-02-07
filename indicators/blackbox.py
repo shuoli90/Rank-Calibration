@@ -4,16 +4,12 @@ import evaluate
 import numpy as np
 from collections import defaultdict
 from itertools import permutations
-from models.opensource import TextGenerationModel
 import re
 import numpy as np
 import utils.clustering as pc
+from utils import text_processing 
 
 CONTRADICT, NEUTRAL, AGREE = 0, 1, 2
-
-def demo_perturb(demos):
-    demo_list = list(permutations(demos))
-    return [[*demo] for demo in demo_list]
 
 class BlackBox():
 
@@ -23,13 +19,18 @@ class BlackBox():
     def compute_scores(self):
         return NotImplementedError
 
+def demo_perturb(demos):
+    demo_list = list(permutations(demos))
+    return [[*demo] for demo in demo_list]
+
 def spectral_projected(eigv_threshold, affinity_mode, temperature, sim_mats):
     # sim_mats: list of similarity matrices using semantic similarity model or jacard similarity
-    clusterer = pc.SpetralClusteringFromLogits(affinity_mode=affinity_mode, eigv_threshold=eigv_threshold,
+    clusterer = pc.SpetralClustering(affinity_mode=affinity_mode, eigv_threshold=eigv_threshold,
                                                 cluster=False, temperature=temperature)
     return [clusterer.proj(_) for _ in sim_mats]
 
 def jaccard_similarity(generations):
+    # accept generations for batched queries
     rets = []
     for gen in generations:
         all_answers = [set(ans.lower().split()) for ans in gen]
@@ -88,9 +89,9 @@ class ICLRobust(BlackBox):
         generations = [self.pipe.generate(prompt_tmp, **kwargs) for prompt_tmp in prompts]
         return generations
     
-    def compute_scores(self, consistency_meansure, demonstrations, prompt, **kwargs):
+    def compute_scores(self, correctness_measure, demonstrations, prompt, **kwargs):
         generations = self.generate(demonstrations, prompt, **kwargs)
-        return consistency_meansure(prompt, generations)
+        return correctness_measure(prompt, generations)
 
 class ReparaphraseRobust(BlackBox):
 
@@ -105,9 +106,11 @@ class ReparaphraseRobust(BlackBox):
             prompt_list = [prompt]
         generations = [self.pipe.generate(prompt, **kwargs) for prompt in prompt_list]
         return generations
+
+    def compute_scores(self, correctness_measure, prompt, **kwargs):
+        raise NotImplementedError
     
 class Eccentricity(BlackBox):
-    
     def __init__(self, eigv_threshold, affinity_mode, temperature):
         self.eigv_threshold = eigv_threshold
         self.affinity_mode = affinity_mode
@@ -119,16 +122,26 @@ class Eccentricity(BlackBox):
         return np.linalg.norm(ds, 2,1), ds
 
 class Degree(BlackBox):
+    def __init__(self, affinity_mode, temperature):
+        self.affinity_mode = affinity_mode
+        self.temperature = temperature
+    
+    def compute_scores(self, sim_mats):
+        Ws = [pc.get_affinity_mat(_, self.affinity_mode, self.temperature, symmetric=False) for _ in sim_mats]
+        ret = np.asarray([np.sum(1-_, axis=1) for _ in Ws])
+        return ret.mean(1), ret
         
-        def __init__(self, affinity_mode, temperature):
-            self.affinity_mode = affinity_mode
-            self.temperature = temperature
-        
-        def compute_scores(self, sim_mats):
-            Ws = [pc.get_affinity_mat(_, self.affinity_mode, self.temperature, symmetric=False) for _ in sim_mats]
-            ret = np.asarray([np.sum(1-_, axis=1) for _ in Ws])
-            return ret.mean(1), ret
-        
+class SpectralEigv(BlackBox):
+    def __init__(self, affinity_mode, temperature, adjust):
+        self.affinity_mode = affinity_mode
+        self.temperature = temperature
+        self.adjust = adjust
+    
+    def compute_scores(self, sim_mats):
+        clusterer = pc.SpetralClustering(affinity_mode=self.affinity_mode, eigv_threshold=None,
+                                                   cluster=False, temperature=self.temperature)
+        return [clusterer.get_eigvs(_).clip(0 if self.adjust else -1).sum() for _ in sim_mats]
+
 class SelfConsistency(BlackBox):
     def __init__(self, pipe, score_name='exact_match'):
         self.pipe = pipe
@@ -138,15 +151,14 @@ class SelfConsistency(BlackBox):
     def compute_scores(self, prompt, gen_text, num_add_trials=5, **kwargs):
         # for a single (query, gen_text) pair
         re_generateds = self.pipe.generate(prompt, num_return_sequences=num_add_trials, max_length=50, do_sample=True, return_full_text=False)
-        re_gen_texts = [TextGenerationModel.clean_generation(re_generated['generated_text']) for re_generated in re_generateds]
+        re_gen_texts = [text_processing.clean_generation(re_generated['generated_text']) for re_generated in re_generateds]
         scores = self.score.compute(references=[gen_text]*num_add_trials, predictions=re_gen_texts)[self.score_name]
         return np.mean(scores)
 
 class Verbalized(BlackBox):
     def __init__(self, pipe=None, model=None):
         self.pipe = pipe
-        self.model = model
-        self.tokenizer = self.pipe.tokenizer if self.pipe else self.model.tokenizer
+        self.tokenizer = self.pipe.tokenizer
         self.description1 = "Read the question and answer.\n"
         self.description2 = "\nProvide a numeric confidence that indicates your certainty about this answer. \
                             For instance, if your confidence level is 80%, it means you are 80% certain that this answer is correct and there is a 20% chance that it is incorrect. \
@@ -167,9 +179,6 @@ class Verbalized(BlackBox):
         cur_length = len(self.tokenizer(combo_text)['input_ids'])
         if self.pipe:
             verbal_conf = self.pipe.generate(combo_text, max_length=cur_length+10, return_full_text=False)[0]['generated_text']
-        elif self.model:
-            # for GPT APIs
-            verbal_conf = self.model.generate([combo_text], max_token=10)[0]['generated_text']
         else:
             raise ValueError("Please specify a valid pipeline or model!")
         return self.extract_confidence(verbal_conf)
@@ -177,23 +186,19 @@ class Verbalized(BlackBox):
 class Hybrid(BlackBox):
     # https://arxiv.org/pdf/2306.13063.pdf
     # use self consistency emsemble with verbalized confidences
-    def __init__(self, pipe=None, model=None, score_name='exact_match'):
+    def __init__(self, pipe=None, score_name='exact_match'):
         self.pipe = pipe
-        self.model = model
         self.score_name = score_name
         self.score = evaluate.load(score_name)
-        self.vb = Verbalized(pipe=pipe, model=model)
+        self.vb = Verbalized(pipe=pipe)
 
     def compute_scores(self, prompt, gen_text, num_add_trials=5, **kwargs):
         # for a single (query, gen_text) pair
         gen_conf = self.vb.compute_scores(prompt, gen_text)
         if self.pipe:
             re_generateds = self.pipe.generate(prompt, num_return_sequences=num_add_trials, max_length=50, do_sample=True, return_full_text=False)
-        elif self.model:
-            # for GPT APIs
-            re_generateds = self.model.generate([prompt], num_return_sequences=num_add_trials, max_tokens=20)
         else:
-            raise ValueError("Please specify a valid pipeline or model!")
+            raise ValueError("Please specify a valid pipeline")
         
         re_gen_texts = [re_generated['generated_text'] for re_generated in re_generateds]
         re_gen_confs = [self.vb.compute_scores(prompt, re_gen_text) for re_gen_text in re_gen_texts]

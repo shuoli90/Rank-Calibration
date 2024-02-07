@@ -58,15 +58,22 @@ class ECE_estimate():
             return self.metric(confidences, labels, num_bins)
 
 def AUARC(confidences, labels):
-    thresholds = np.arange(0, 1, 0.01)
+    # An accuracy rejection curve (ARC) is a function representating the accuracy of a classifier \
+    # as a function of its reject rate. 
+    # An ARC is therefore produced by plotting the accuracy of a classifier against its reject rate, from [0,1].
+    # All ARCs have an accuracy of 100% for a rejection rate of 100%
+    rejection_rate = np.arange(0, 1, 0.01)
     if type(confidences) is not np.ndarray:
         confidences = np.array(confidences)
     if type(labels) is not np.ndarray:
         labels = np.array(labels)
-    # normalize the confidences
-    confidences = (confidences - confidences.min()) / (confidences.max() - confidences.min())
     arcs = []
-    for threshold in thresholds:
-        correct = np.mean(labels[confidences >= threshold])
-        arcs.append(correct)
-    return np.trapz(arcs, thresholds)
+    for rate in rejection_rate:
+        labels_tmp = labels[confidences > np.quantile(confidences, rate)]
+        if len(labels_tmp) == 0:
+            arc = 1.0
+        else:
+            # reject rate portion of the data
+            arc = np.mean(labels_tmp)
+        arcs.append(arc)
+    return np.trapz(arcs, rejection_rate)

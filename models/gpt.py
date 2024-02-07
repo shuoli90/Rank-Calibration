@@ -38,17 +38,32 @@ class GPTModel:
         self.model_name = model_name
         self.tokenizer = AutoTokenizer.from_pretrained("openai-gpt")
 
-    def generate(self, prompts, num_return_sequences=1, **kwargs):
+    def generate(self, prompts, num_return_sequences=1, max_length=50, do_sample=True, return_full_text=False, temperature=1.0, **kwargs):
+
+        if not isinstance(prompts, list):
+            prompts = [prompts]
 
         messages = [{"role": "user",
                     "content": prompt} for prompt in prompts]
-        response = chatcompletions_with_backoff(
-            model=self.model_name,
-            messages=messages,
-            n=num_return_sequences,
-            # **kwargs # to be refined
-        )
-        responses = [{'generated_text': choice.message.content.strip()}
+        completions = []
+        for message in messages:
+            response = chatcompletions_with_backoff(
+                model=self.model_name,
+                messages=[message],
+                n=num_return_sequences,
+                max_tokens=max_length,
+                temperature=temperature if do_sample else 0,
+                # **kwargs # to be refined
+            )
+            completions.append(response)
+        responses_list = []
+        for completion in completions:
+            responses = [{'generated_text': choice.message.content.strip()}
                 for choice
-                in response.choices]
+                in completion.choices]
+            responses_list.append(responses)
+        if return_full_text:
+            for prompt, response in zip(prompts, responses_list):
+                for item in response:
+                    item['generated_text'] = f"{prompt} {item['generated_text']}"
         return responses

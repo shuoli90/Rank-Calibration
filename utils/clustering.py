@@ -7,27 +7,27 @@ import torch
 from sklearn.cluster import KMeans
 
 
-def get_affinity_mat(logits, mode='disagreement', temp=None, symmetric=True):
+def get_affinity_mat(scores, mode='disagreement', temp=None, symmetric=True):
     if mode == 'jaccard':
-        return logits
+        return scores
     # can be weigheted
     if mode == 'disagreement':
-        logits = (logits + logits.permute(1,0,2))/2
-        W = logits.argmax(-1) != 0
+        scores = (scores + scores.permute(1,0,2))/2
+        W = scores.argmax(-1) != 0
     if mode == 'disagreement_w':
-        W = torch.softmax(logits/temp, dim=-1)[:, :, 0]
+        W = torch.softmax(scores/temp, dim=-1)[:, :, 0]
         if symmetric:
             W = (W + W.permute(1,0))/2
         W = 1 - W
     if mode == 'agreement':
-        logits = (logits + logits.permute(1,0,2))/2
-        W = logits.argmax(-1) == 2
+        scores = (scores + scores.permute(1,0,2))/2
+        W = scores.argmax(-1) == 2
     if mode == 'agreement_w':
-        W = torch.softmax(logits/temp, dim=-1)[:, :, 2]
+        W = torch.softmax(scores/temp, dim=-1)[:, :, 2]
         if symmetric:
             W = (W + W.permute(1,0))/2
     if mode == 'gal':
-        W = logits.argmax(-1)
+        W = scores.argmax(-1)
         _map = {i:i for i in range(len(W))}
         for i in range(len(W)):
             for j in range(i+1, len(W)):
@@ -65,13 +65,6 @@ def get_eig(L, thres=None, eps=None):
         L = (1-eps) * L + eps * np.eye(len(L))
     eigvals, eigvecs = np.linalg.eigh(L)
 
-    #eigvals, eigvecs = np.linalg.eig(L)
-    #assert np.max(np.abs(eigvals.imag)) < 1e-5
-    #eigvals = eigvals.real
-    #idx = eigvals.argsort()
-    #eigvals = eigvals[idx]
-    #eigvecs = eigvecs[:,idx]
-
     if thres is not None:
         keep_mask = eigvals < thres
         eigvals, eigvecs = eigvals[keep_mask], eigvecs[:, keep_mask]
@@ -91,7 +84,7 @@ def find_equidist(P, eps=1e-4):
     assert np.max(vl[:, -1].imag) < 1e-5
     return vl[:, -1].real / vl[:, -1].real.sum()
 
-class SpetralClusteringFromLogits:
+class SpetralClustering:
     def __init__(self,
                  affinity_mode='disagreement_w',
                  eigv_threshold=0.9,
@@ -106,18 +99,18 @@ class SpetralClusteringFromLogits:
         if affinity_mode == 'jaccard':
             assert self.temperature is None
 
-    def get_laplacian(self, logits):
-        W = get_affinity_mat(logits, mode=self.affinity_mode, temp=self.temperature)
+    def get_laplacian(self, scores):
+        W = get_affinity_mat(scores, mode=self.affinity_mode, temp=self.temperature)
         L = get_L_mat(W, symmetric=True)
         return L
 
-    def get_eigvs(self, logits):
-        L = self.get_laplacian(logits)
+    def get_eigvs(self, scores):
+        L = self.get_laplacian(scores)
         return (1-get_eig(L)[0])
 
-    def __call__(self, logits, cluster=None):
+    def __call__(self, scores, cluster=None):
         if cluster is None: cluster = self.cluster
-        L = self.get_laplacian(logits)
+        L = self.get_laplacian(scores)
         if not cluster:
             return (1-get_eig(L)[0]).clip(0 if self.adjust else -1).sum()
         eigvals, eigvecs = get_eig(L, thres=self.eigv_threshold)
@@ -126,22 +119,22 @@ class SpetralClusteringFromLogits:
         kmeans = KMeans(n_clusters=k, random_state=self.rs, n_init='auto').fit(eigvecs)
         return kmeans.labels_
 
-    def clustered_entropy(self, logits):
+    def clustered_entropy(self, scores):
         from scipy.stats import entropy
-        labels = self(logits, cluster=True)
-        P = torch.softmax(logits, dim=-1)[:, :, 2].cpu().numpy()
+        labels = self(scores, cluster=True)
+        P = torch.softmax(scores, dim=-1)[:, :, 2].cpu().numpy()
         pi = find_equidist(P)
         clustered_pi = pd.Series(pi).groupby(labels).sum().values
         return entropy(clustered_pi)
 
-    def eig_entropy(self, logits):
-        W = get_affinity_mat(logits, mode=self.affinity_mode, temp=self.temperature)
+    def eig_entropy(self, scores):
+        W = get_affinity_mat(scores, mode=self.affinity_mode, temp=self.temperature)
         L = get_L_mat(W, symmetric=True)
         eigs = get_eig(L, eps=1e-4)[0] / W.shape[0]
         return np.exp(- (eigs * np.nan_to_num(np.log(eigs))).sum())
 
-    def proj(self, logits):
-        W = get_affinity_mat(logits, mode=self.affinity_mode, temp=self.temperature)
+    def proj(self, scores):
+        W = get_affinity_mat(scores, mode=self.affinity_mode, temp=self.temperature)
         L = get_L_mat(W, symmetric=True)
         eigvals, eigvecs = get_eig(L, thres=self.eigv_threshold)
         return eigvecs

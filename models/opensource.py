@@ -33,23 +33,21 @@ class TextGenerationModel:
 class NLIModel:
     
     def __init__(self, model_name='microsoft/deberta-large-mnli', **kwargs):
-        self.pip = pipeline(model=model_name, **kwargs)
+        self.pipe = pipeline(model=model_name, **kwargs)
     
     @torch.no_grad()
     def classify(self, question, prompts, **kwargs):
         # https://github.com/lorenzkuhn/semantic_uncertainty
         # https://github.com/zlin7/UQ-NLG
-        unique_ans = sorted(list(set(prompts)))
-        semantic_set_ids = {ans: i for i, ans in enumerate(unique_ans)}
+        semantic_set_ids = {ans: i for i, ans in enumerate(prompts)}
         _rev_mapping = semantic_set_ids.copy()
-        sim_mat_batch = torch.zeros((len(unique_ans), len(unique_ans),3))
-        pairs = []
+        sim_mat_batch = torch.zeros((len(prompts), len(prompts),3))
         make_input = lambda x: dict(text=x[0],text_pair=x[1])
-        for i, ans_i in enumerate(unique_ans):
-            for j, ans_j in enumerate(unique_ans):
-                if i == j: continue
-                logits = self.pip(make_input([f"{question} {ans_i}", f"{question} {ans_j}"]), return_all_scores=True, **kwargs)
-                sim_mat_batch[i,j] = torch.tensor([logit['score'] for logit in logits])
+        for i, ans_i in enumerate(prompts):
+            for j, ans_j in enumerate(prompts):
+                # if i == j: continue # may not needed
+                scores = self.pipe(make_input([f"{question} {ans_i}", f"{question} {ans_j}"]), return_all_scores=True, **kwargs)
+                sim_mat_batch[i,j] = torch.tensor([score['score'] for score in scores])
         return dict(
             mapping = [_rev_mapping[_] for _ in prompts],
             sim_mat = sim_mat_batch
