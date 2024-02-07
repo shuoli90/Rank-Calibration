@@ -44,8 +44,8 @@ def get_neg_loglikelihoods(model, tokenizer, sequences):
             average_neg_log_likelihoods[generation_index] = average_neg_log_likelihood
             average_unconditioned_neg_log_likelihoods[generation_index] = average_unconditioned_neg_log_likelihood
             # neg_log_likelihoods[generation_index] = average_neg_log_likelihood * (len(generation) - len(prompt))
-            neg_log_likelihoods[generation_index] = average_neg_log_likelihood * len(generation)
-            neg_unconditioned_log_likelihoods[generation_index] = average_unconditioned_neg_log_likelihood * len(generation)
+            neg_log_likelihoods[generation_index] = average_neg_log_likelihood * len(generation_only)
+            neg_unconditioned_log_likelihoods[generation_index] = average_unconditioned_neg_log_likelihood * len(generation_only)
             pointwise_mutual_information[generation_index] = -neg_log_likelihoods[
                 generation_index] + neg_unconditioned_log_likelihoods[generation_index]
 
@@ -153,23 +153,27 @@ class SemanticEntropy(WhiteBox):
         return entropies
 
 class PerplexityScore(WhiteBox):
-    def __init__(self, model, tokenizer):
-        max_length = model.config.n_positions
-
+    def __init__(self, pipe):
+        self.model = pipe.model
+        self.tokenizer = pipe.tokenizer
+        self.device = self.model.device
     
-    def compute_scores(self, generateds):
-        gen_texts = [[TextGenerationModel.clean_generation(gen['generated_text']) for gen in generated] for generated in generateds]
-        results = []
-        for gen_text in gen_texts:
-            result = self.perplexity.compute(predictions=gen_text, model_id=self.model)
-            results.append(result)
-        return results
+    def compute_scores(self, prompts, references):
+        sequences = [{
+            'prompt': torch.tensor(self.tokenizer.encode(prompt)).to(self.model.device),
+            'generations': torch.tensor(self.tokenizer(ref, padding='longest')['input_ids']).to(self.device),
+            'id': 0
+        } for prompt, ref in zip(prompts, references)]
+        results = get_neg_loglikelihoods(self.model, self.tokenizer, sequences)
+        breakpoint()
+        normalized_nlls = torch.stack([s['average_neg_log_likelihoods'] for s in results])
+        return torch.exp(normalized_nlls)
 
 class GenerationProbability(WhiteBox):
-    def __init__(self, model, tokenizer):
-        self.model = model
-        self.tokenizer = tokenizer
-        self.device = model.device
+    def __init__(self, pipe):
+        self.model = pipe.model
+        self.tokenizer = pipe.tokenizer
+        self.device = self.model.device
     
     def compute_scores(self, prompts, generateds):
         gen_texts = [[TextGenerationModel.clean_generation(gen['generated_text']) for gen in generated] for generated in generateds]
