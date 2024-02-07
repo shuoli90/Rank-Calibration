@@ -1,7 +1,6 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
-import openai
 from tenacity import (
     retry,
     stop_after_attempt,
@@ -24,7 +23,7 @@ def chat_gpt(prompt):
     )
     return response.choices[0].message.content.strip()
 
-# @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
+@retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
 def chatcompletions_with_backoff(model, messages, n, **kwargs):
     return client.chat.completions.create(
         model=model, 
