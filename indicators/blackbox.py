@@ -23,23 +23,32 @@ def demo_perturb(demos):
     demo_list = list(permutations(demos))
     return [[*demo] for demo in demo_list]
 
-def spectral_projected(eigv_threshold, affinity_mode, temperature, sim_mats):
-    # sim_mats: list of similarity matrices using semantic similarity model or jacard similarity
-    clusterer = pc.SpetralClustering(affinity_mode=affinity_mode, eigv_threshold=eigv_threshold,
-                                                cluster=False, temperature=temperature)
-    return [clusterer.proj(_) for _ in sim_mats]
+def spectral_projected(affinity_mode, sim_mats):
+    '''
+    Input:
+        sim_mats: a batch n*n real-valued similarity matrices
+    Output:
+        the projection of similarity matrices on eigenvectors
+    '''
+    clusterer = pc.SpetralClustering(affinity_mode=affinity_mode, cluster=False)
+    return [clusterer.proj(mat) for mat in sim_mats]
 
-def jaccard_similarity(generations):
-    # accept generations for batched queries
-    rets = []
-    for gen in generations:
-        all_answers = [set(ans.lower().split()) for ans in gen]
-        ret = np.eye(len(all_answers))
-        for i, ans_i in enumerate(all_answers):
-            for j, ans_j in enumerate(all_answers[i+1:], i+1):
-                ret[i,j] = ret[j,i] = len(ans_i.intersection(ans_j)) / max(len(ans_i.union(ans_j)),1)
-        rets.append(ret)
-    return rets
+def jaccard_similarity(batch_sequences):
+    '''
+    Input:
+        batch_sequences: a batch of sequences [(s_1, ..., s_{n_b}]*B
+    Output:
+        sim_mats: a batch of n*n real-valued similarity matrices
+    '''
+    sim_mats = []
+    for sequences in batch_sequences:
+        wordy_sets = [set(seq.lower().split()) for seq in sequences]
+        mat = np.eye(len(wordy_sets))
+        for i, set_i in enumerate(wordy_sets):
+            for j, set_j in enumerate(wordy_sets[i+1:], i+1):
+                mat[i,j] = mat[j,i] = len(set_i.intersection(set_j)) / max(len(set_i.union(set_j)),1)
+        sim_mats.append(mat)
+    return sim_mats
 
 class SemanticConsistency(BlackBox):
     def __init__(self, similarity_model, device='cuda'):
@@ -110,17 +119,59 @@ class ReparaphraseRobust(BlackBox):
     def compute_scores(self, correctness_measure, prompt, **kwargs):
         raise NotImplementedError
     
-class Eccentricity(BlackBox):
-    def __init__(self, eigv_threshold, affinity_mode, temperature):
+# class Eccentricity(BlackBox):
+#     def __init__(self, eigv_threshold, affinity_mode, temperature):
+#         self.eigv_threshold = eigv_threshold
+#         self.affinity_mode = affinity_mode
+#         self.temperature = temperature
+    
+#     def compute_scores(self, sim_mats):
+#         projected = spectral_projected(self.eigv_threshold, self.affinity_mode, self.temperature, sim_mats)
+#         ds = np.asarray([np.linalg.norm(x -x.mean(0)[None, :],2,axis=1) for x in projected])
+#         return np.linalg.norm(ds, 2,1), ds
+    
+class EccentricityUncertainty(BlackBox):
+    def __init__(self, affinity_mode, temperature=1.0, eigv_threshold = 0.0):
         self.eigv_threshold = eigv_threshold
         self.affinity_mode = affinity_mode
         self.temperature = temperature
     
-    def compute_scores(self, sim_mats):
+    def compute_scores(self, batch_sequences=None, sim_mats=None, sim_func=jaccard_similarity):
+        '''
+        Input:
+            batch_sequences: a batch of sequences [(s_1, ..., s_{n_b}]*B
+        Output:
+            U: a batch of eccentricity uncertainties
+        '''
+        if not sim_mats and batch_sequences:
+            sim_mats = sim_func(batch_sequences)
+        else:
+            raise ValueError("Please input valid sequences-batch or similarity matrices!")
         projected = spectral_projected(self.eigv_threshold, self.affinity_mode, self.temperature, sim_mats)
         ds = np.asarray([np.linalg.norm(x -x.mean(0)[None, :],2,axis=1) for x in projected])
         return np.linalg.norm(ds, 2,1), ds
     
+class EccentricityConfidence(BlackBox):
+    def __init__(self, eigv_threshold, affinity_mode, temperature=1.0):
+        self.eigv_threshold = eigv_threshold
+        self.affinity_mode = affinity_mode
+        self.temperature = temperature
+    
+    def compute_scores(self, batch_sequences=None, sim_mats=None, sim_func=jaccard_similarity):
+        '''
+        Input:
+            batch_sequences: a batch of sequences [(s_1, ..., s_{n_b}]*B
+        Output:
+            C: a batch of eccentricity uncertainties
+        '''
+        if not sim_mats and batch_sequences:
+            sim_mats = sim_func(batch_sequences)
+        else:
+            raise ValueError("Please input valid sequences-batch or similarity matrices!")
+        projected = spectral_projected(self.eigv_threshold, self.affinity_mode, self.temperature, sim_mats)
+        ds = np.asarray([np.linalg.norm(x -x.mean(0)[None, :],2,axis=1) for x in projected])
+        return np.linalg.norm(ds, 2,1), ds
+
 class Degree(BlackBox):
     def __init__(self, affinity_mode, temperature):
         self.affinity_mode = affinity_mode

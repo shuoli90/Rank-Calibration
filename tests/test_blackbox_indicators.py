@@ -9,11 +9,11 @@ from utils import text_processing
 if __name__ == '__main__':
     prompt = "Once upon a time:"
     demos = ['90%: confident', '75%: probably', '10%: very unlikely']
-    demons = blackbox.demo_perturb(demos)
+    demons = blackbox_backup.demo_perturb(demos)
     prompts = [" ".join([*demo, prompt]) for demo in demons]
 
     pipe = opensource.TextGenerationModel(model_name="facebook/opt-350m", torch_dtype=torch.bfloat16)
-    iclrobust = blackbox.ICLRobust(pipe=pipe, demo_transforms=blackbox.demo_perturb)
+    iclrobust = blackbox_backup.ICLRobust(pipe=pipe, demo_transforms=blackbox_backup.demo_perturb)
     generations = iclrobust.generate(demos, prompt, max_length=50)
 
     
@@ -47,7 +47,7 @@ if __name__ == '__main__':
     # print(output)
 
     generations = [['hello 1', 'hello world 2', 'good morning', 'morning biden']]
-    sim = blackbox.jaccard_similarity(generations)
+    sim = blackbox_backup.jaccard_similarity(generations)
     print(sim)
     # pipe = gpt.GPTModel()
     # generated = pipe.generate(prompt, max_length=50, num_return_sequences=2, return_full_text=False)

@@ -10,7 +10,7 @@ if __name__ == '__main__':
     generations = ['Leukemia', 'Low Blood Pressure', 'Cervical cancer', 'Cancer in 1953 at 41', 'Breast cancer', 'Tuberculosis', 'Cancer', 'Leukaemia',
                    'Cancer (in 1953 at age 41)', 'Throat cancer']
     jaccard = blackbox.jaccard_similarity([generations])
-
+    breakpoint()
     nlimodel = opensource.NLIModel(device='cuda')
     sc = blackbox.SemanticConsistency(nlimodel)
     sc_mat = sc.similarity_mat("", [generations])

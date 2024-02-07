@@ -7,7 +7,7 @@ import torch
 from sklearn.cluster import KMeans
 
 
-def get_affinity_mat(scores, mode='disagreement', temp=None, symmetric=True):
+def get_affinity_mat(scores, mode='disagreement'):
     if mode == 'jaccard':
         return scores
     scores = (scores + scores.permute(1,0,2))/2
