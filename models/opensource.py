@@ -57,7 +57,7 @@ class NLIModel:
     def compare(self, question, ans_1, ans_2, **kwargs):
         prompt1 = dict(text=f'{question} {ans_1}', text_pair=f'{question} {ans_2}')
         prompt2 = dict(text=f'{question} {ans_2}', text_pair=f'{question} {ans_1}')
-        logits_list = self.pip([prompt1, prompt2], return_all_scores=True, **kwargs)
+        logits_list = self.pipe([prompt1, prompt2], return_all_scores=True, **kwargs)
         logits = torch.tensor([[logit['score'] for logit in logits] for logits in logits_list])
         pred = 0 if logits.argmax(dim=1).min() == 0 else 1
         return {

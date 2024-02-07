@@ -13,18 +13,21 @@ if __name__ == '__main__':
     generateds = pipe.generate(prompts, max_length=50, num_return_sequences=5, do_sample=True)
     most_likely_generations = pipe.generate(prompts, max_length=50, num_return_sequences=1, do_sample=False)
     
-    # semantic entropy
-    se = whitebox.SemanticEntropy(
-            prompts=prompts, 
-            generateds=generateds, 
-            model=pipe.model, 
-            tokenizer=pipe.tokenizer, device='cuda')
-    entropy = se.compute_scores(normalize=True)
+#     # semantic entropy
+#     se = whitebox.SemanticEntropy(
+#             prompts=prompts, 
+#             generateds=generateds, 
+#             model=pipe.model, 
+#             tokenizer=pipe.tokenizer, device='cuda')
+#     entropy = se.compute_scores(normalize=True)
 
     # perplexity score
-    Perplexity = whitebox.PerplexityScore(model="facebook/opt-350m")
-    perplexities = Perplexity.compute_scores(generateds)
-    
+#     Perplexity = whitebox.PerplexityScore(model=pipe.model, tokenizer=pipe.tokenizer)
+#     perplexities = Perplexity.compute_scores(generateds)
+#     print(perplexities)
+
+
     # generation probability
     GenerationProbability = whitebox.GenerationProbability(model=pipe.model, tokenizer=pipe.tokenizer)
     probabilities = GenerationProbability.compute_scores(prompts, generateds)
+    print(probabilities)

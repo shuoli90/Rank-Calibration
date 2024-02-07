@@ -156,7 +156,7 @@ class SelfConsistency(BlackBox):
         return np.mean(scores)
 
 class Verbalized(BlackBox):
-    def __init__(self, pipe=None, model=None):
+    def __init__(self, pipe=None):
         self.pipe = pipe
         self.tokenizer = self.pipe.tokenizer
         self.description1 = "Read the question and answer.\n"
