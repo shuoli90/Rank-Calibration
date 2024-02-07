@@ -10,32 +10,17 @@ from sklearn.cluster import KMeans
 def get_affinity_mat(scores, mode='disagreement', temp=None, symmetric=True):
     if mode == 'jaccard':
         return scores
-    # can be weigheted
+    scores = (scores + scores.permute(1,0,2))/2
     if mode == 'disagreement':
-        scores = (scores + scores.permute(1,0,2))/2
         W = scores.argmax(-1) != 0
-    if mode == 'disagreement_w':
-        W = torch.softmax(scores/temp, dim=-1)[:, :, 0]
-        if symmetric:
-            W = (W + W.permute(1,0))/2
-        W = 1 - W
-    if mode == 'agreement':
-        scores = (scores + scores.permute(1,0,2))/2
+    elif mode == 'agreement':
         W = scores.argmax(-1) == 2
-    if mode == 'agreement_w':
-        W = torch.softmax(scores/temp, dim=-1)[:, :, 2]
-        if symmetric:
-            W = (W + W.permute(1,0))/2
-    if mode == 'gal':
-        W = scores.argmax(-1)
-        _map = {i:i for i in range(len(W))}
-        for i in range(len(W)):
-            for j in range(i+1, len(W)):
-                if min(W[i,j], W[j,i]) > 0:
-                    _map[j] = _map[i]
-        W = torch.zeros_like(W)
-        for i in range(len(W)):
-            W[i, _map[i]] = W[_map[i], i] = 1
+    elif mode == 'entailment':
+        W = scores[:, :, 2]
+    elif mode == 'contradiction':
+        W = 1-scores[:, :, 0]
+    else:
+        raise NotImplementedError()
     W = W.cpu().numpy()
     W[np.arange(len(W)), np.arange(len(W))] = 1
     W = W.astype(np.float32)
@@ -64,6 +49,7 @@ def get_eig(L, thres=None, eps=None):
     if eps is not None:
         L = (1-eps) * L + eps * np.eye(len(L))
     eigvals, eigvecs = np.linalg.eigh(L)
+    breakpoint()
 
     if thres is not None:
         keep_mask = eigvals < thres

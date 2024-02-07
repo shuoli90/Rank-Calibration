@@ -120,7 +120,7 @@ class Eccentricity(BlackBox):
         projected = spectral_projected(self.eigv_threshold, self.affinity_mode, self.temperature, sim_mats)
         ds = np.asarray([np.linalg.norm(x -x.mean(0)[None, :],2,axis=1) for x in projected])
         return np.linalg.norm(ds, 2,1), ds
-
+    
 class Degree(BlackBox):
     def __init__(self, affinity_mode, temperature):
         self.affinity_mode = affinity_mode
@@ -142,7 +142,7 @@ class SpectralEigv(BlackBox):
                                                    cluster=False, temperature=self.temperature)
         return [clusterer.get_eigvs(_).clip(0 if self.adjust else -1).sum() for _ in sim_mats]
 
-class SelfConsistency(BlackBox):
+class SelfConsistencyConfidence(BlackBox):
     def __init__(self, pipe, score_name='exact_match'):
         self.pipe = pipe
         self.score_name = score_name
@@ -155,7 +155,7 @@ class SelfConsistency(BlackBox):
         scores = self.score.compute(references=[gen_text]*num_add_trials, predictions=re_gen_texts)[self.score_name]
         return np.mean(scores)
 
-class Verbalized(BlackBox):
+class VerbalizedConfidence(BlackBox):
     def __init__(self, pipe=None):
         self.pipe = pipe
         self.tokenizer = self.pipe.tokenizer
@@ -183,7 +183,7 @@ class Verbalized(BlackBox):
             raise ValueError("Please specify a valid pipeline or model!")
         return self.extract_confidence(verbal_conf)
 
-class Hybrid(BlackBox):
+class HybridConfidence(BlackBox):
     # https://arxiv.org/pdf/2306.13063.pdf
     # use self consistency emsemble with verbalized confidences
     def __init__(self, pipe=None, score_name='exact_match'):
