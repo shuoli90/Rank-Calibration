@@ -14,6 +14,7 @@ if __name__ == '__main__':
     nlimodel = opensource.NLIModel(device='cuda')
     sc = blackbox.SemanticConsistency(nlimodel)
     sc_mat = sc.similarity_mat("", [generations])
+    # sc_mat = sc.similarity_mat("What claimed the life of singer Kathleen Ferrier?", [generations])
 
     # ecc = blackbox.Eccentricity(
     #     eigv_threshold=0.5, 
@@ -35,3 +36,4 @@ if __name__ == '__main__':
     result = eigv.compute_scores(sc_mat)
 
     print(result)
+    breakpoint()
