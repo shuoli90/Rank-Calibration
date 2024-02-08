@@ -6,29 +6,35 @@ import numpy as np
 class TextGenerationModel:
     
     def __init__(self, model_name='meta-llama/Llama-2-7b-hf', **kwargs):
-        self.pip = pipeline(model=model_name, device_map="auto", **kwargs)
+        self.pipe = pipeline(model=model_name, device_map="auto", **kwargs)
 
     def generate(self, prompts, **kwargs):
-        return self.pip(prompts, **kwargs)
+        return self.pipe(prompts, **kwargs)
     
     @functools.cached_property
     def model(self):
-        return self.pip.model
+        return self.pipe.model
     
     @functools.cached_property
     def tokenizer(self):
-        return self.pip.tokenizer
+        return self.pipe.tokenizer
     
     @classmethod
-    def clean_generation(cls, generation):
+    def clean_generation(cls, sequence):
+        '''
+        Input:
+            sequence: s
+        Output:
+            cleaned sequence: s
+        '''
         strings_to_filter_on = [
                     '.', '\n', 'Q:', 'A:', 'question:', 'answer:', 'Question:', 'Answer:', 'Questions:', 'questions:', 'QUESTION:',
                     'ANSWER:'
                 ]
         for string in strings_to_filter_on:
-            if string in generation:
-                generation = generation.split(string)[0]
-        return generation.strip()
+            if string in sequence:
+                sequence = sequence.split(string)[0]
+        return sequence.strip()
 
 class NLIModel:
     
@@ -36,27 +42,34 @@ class NLIModel:
         self.pipe = pipeline(model=model_name, **kwargs)
     
     @torch.no_grad()
-    def classify(self, question, prompts, **kwargs):
+    def classify(self, prompt, responses, **kwargs):
+        '''
+        Input:
+            prompt: a string-formatted prompt p
+            responses: responses [r_1, ..., r_n]
+        Output:
+            a dictionary contains a mapping of response indexing and a n*n similarity matrix
+        '''
         # https://github.com/lorenzkuhn/semantic_uncertainty
         # https://github.com/zlin7/UQ-NLG
-        semantic_set_ids = {ans: i for i, ans in enumerate(prompts)}
+        semantic_set_ids = {resp: i for i, resp in enumerate(responses)}
         _rev_mapping = semantic_set_ids.copy()
-        sim_mat_batch = torch.zeros((len(prompts), len(prompts),3))
+        sim_mat_batch = torch.zeros((len(responses), len(responses),3))
         make_input = lambda x: dict(text=x[0],text_pair=x[1])
-        for i, ans_i in enumerate(prompts):
-            for j, ans_j in enumerate(prompts):
+        for i, response_i in enumerate(responses):
+            for j, response_j in enumerate(responses):
                 # if i == j: continue # may not needed
-                scores = self.pipe(make_input([f"{question} {ans_i}", f"{question} {ans_j}"]), return_all_scores=True, **kwargs)
+                scores = self.pipe(make_input([f"{prompt} {response_i}", f"{prompt} {response_j}"]), return_all_scores=True, **kwargs)
                 sim_mat_batch[i,j] = torch.tensor([score['score'] for score in scores])
         return dict(
-            mapping = [_rev_mapping[_] for _ in prompts],
+            mapping = [_rev_mapping[_] for _ in responses],
             sim_mat = sim_mat_batch
         )
     
     @torch.no_grad()
-    def compare(self, question, ans_1, ans_2, **kwargs):
-        prompt1 = dict(text=f'{question} {ans_1}', text_pair=f'{question} {ans_2}')
-        prompt2 = dict(text=f'{question} {ans_2}', text_pair=f'{question} {ans_1}')
+    def compare(self, prompt, response_1, response_2, **kwargs):
+        prompt1 = dict(text=f'{prompt} {response_1}', text_pair=f'{prompt} {response_2}')
+        prompt2 = dict(text=f'{prompt} {response_2}', text_pair=f'{prompt} {response_1}')
         logits_list = self.pipe([prompt1, prompt2], return_all_scores=True, **kwargs)
         logits = torch.tensor([[logit['score'] for logit in logits] for logits in logits_list])
         pred = 0 if logits.argmax(dim=1).min() == 0 else 1
