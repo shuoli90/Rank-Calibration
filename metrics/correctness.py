@@ -9,8 +9,15 @@ class Score():
         self.threshold = metric_threshold
         self.mode = mode
     
-    def __call__(self, predictions, references):
-        score = self.metric.compute(predictions=predictions, references=references)
+    def __call__(self, predictions, references, use_aggregator=True):
+        '''
+        Input:
+            prediction: a prediction [p^1, ..., p^B]
+            list_references: refereces [[r_1^1, ..., r_{n_1}^1], ..., [r_1^B, ..., r_{n_B}^B]]
+        Output:
+            
+        '''
+        score = self.metric.compute(predictions=predictions, references=references, use_aggregator=use_aggregator)
         if isinstance(score, dict):
             score = score[self.mode]
         return score

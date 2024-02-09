@@ -6,8 +6,8 @@ from metrics import correctness
 
 if __name__ == '__main__':
     metric_names = ['rouge', 'bleu', 'meteor']
-    generations = ['J. Biden']
-    references = [['Joe Biden', 'President Joe Biden']]
+    generations = ['J. Biden', 'Morning']
+    references = [['Joe Biden', 'President Joe Biden'], ['Joe Biden', 'President Joe Biden']]
     for metric_name in metric_names:
         if metric_name == 'rouge':
             score = correctness.Score(metric_name=metric_name, mode='rouge1')

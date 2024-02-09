@@ -10,17 +10,21 @@ if __name__ == '__main__':
     pipe = opensource.TextGenerationModel(model_name="facebook/opt-350m", torch_dtype=torch.bfloat16)
     # prompts = ['Once upon a time']
     prompts = ['Once upon a time', 'when the sun rises']
-    references = [['Yes, I am'], ['No, I am not']]
-    generateds = pipe.generate(prompts, max_length=50, num_return_sequences=5, do_sample=True)
-    most_likely_generations = pipe.generate(prompts, max_length=50, num_return_sequences=1, do_sample=False)
+
+    references = [['Yes, I am', 'Good morning'], ['No, I am not', 'see you soon']]
+
+    # generations = ['Leukemia', 'Low Blood Pressure', 'Cervical cancer', 'Cancer in 1953 at 41', 'Breast cancer', 'Tuberculosis', 'Cancer', 'Leukaemia',
+                #    'Cancer (in 1953 at age 41)', 'Throat cancer']
+    # generations = ['Pink Floyd', 'Pink Floyd in Edinburgh', 'Pink Floyd', 'Shambles', 'Pink Floyd', 'Pink Floyd', 'Pink Floyd', 'Pink Floyd', 'Pink Floyd', 'Pink Floyd']
+    generations = ['Pink Floyd', 'Pink Floyd', 'Pink Floyd', 'Pink Floyd', 'Pink Floyd', 'Pink Floyd', 'Pink Floyd', 'Pink Floyd', 'Pink Floyd', 'Pink Floyd']
+    # generateds = pipe.generate(prompts, max_length=50, num_return_sequences=5, do_sample=True, return_full_text=False)
+    # gen_texts = [[opensource.TextGenerationModel.clean_generation(gen['generated_text']) for gen in generated] for generated in generateds]
+    # most_likely_generations = pipe.generate(prompts, max_length=50, num_return_sequences=1, do_sample=False, return_full_text=False)
     
     # semantic entropy
-#     se = whitebox.SemanticEntropy(
-#             prompts=prompts, 
-#             generateds=generateds, 
-#             model=pipe.model, 
-#             tokenizer=pipe.tokenizer, device='cuda')
-#     entropy = se.compute_scores(normalize=True)
+    se = whitebox.SemanticEntropy(pipe=pipe)
+    entropy = se.compute_scores([""], [generations])
+    print(entropy)
 
     # perplexity score
 #     Perplexity = whitebox.PerplexityScore(model="facebook/opt-350m")
@@ -28,8 +32,11 @@ if __name__ == '__main__':
 
     perplexity = whitebox.PerplexityScore(pipe=pipe)
     result = perplexity.compute_scores(prompts, references)
+    # perplexity = whitebox.PerplexityScore(pipe=pipe)
+    # result = perplexity.compute_scores(prompts, references)
+    # breakpoint()
     
     # generation probability
-    GenerationProbability = whitebox.GenerationProbability(model=pipe.model, tokenizer=pipe.tokenizer)
-    probabilities = GenerationProbability.compute_scores(prompts, generateds)
-    print(probabilities)
+    # GenerationProbability = whitebox.GenerationProbability(pipe=pipe)
+    # probabilities = GenerationProbability.compute_scores(prompts, gen_texts)
+    # print(probabilities)

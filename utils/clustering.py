@@ -7,18 +7,18 @@ import torch
 from sklearn.cluster import KMeans
 
 
-def get_affinity_mat(scores, mode='disagreement', temp=None, symmetric=True):
+def get_affinity_mat(sim_mat, mode='disagreement'):
     if mode == 'jaccard':
-        return scores
-    scores = (scores + scores.permute(1,0,2))/2
+        return sim_mat
+    sim_mat = (sim_mat + sim_mat.permute(1,0,2))/2
     if mode == 'disagreement':
-        W = scores.argmax(-1) != 0
+        W = sim_mat.argmax(-1) != 0
     elif mode == 'agreement':
-        W = scores.argmax(-1) == 2
+        W = sim_mat.argmax(-1) == 2
     elif mode == 'entailment':
-        W = scores[:, :, 2]
+        W = sim_mat[:, :, 2]
     elif mode == 'contradiction':
-        W = 1-scores[:, :, 0]
+        W = 1-sim_mat[:, :, 0]
     else:
         raise NotImplementedError()
     W = W.cpu().numpy()
@@ -72,9 +72,9 @@ def find_equidist(P, eps=1e-4):
 class SpetralClustering:
     def __init__(self,
                  affinity_mode='disagreement_w',
-                 eigv_threshold=0.9,
+                 eigv_threshold=None,
                  cluster=True,
-                 temperature=3., adjust=False) -> None:
+                 temperature=None, adjust=False) -> None:
         self.affinity_mode = affinity_mode
         self.eigv_threshold = eigv_threshold
         self.rs = 0
@@ -84,18 +84,18 @@ class SpetralClustering:
         if affinity_mode == 'jaccard':
             assert self.temperature is None
 
-    def get_laplacian(self, scores):
-        W = get_affinity_mat(scores, mode=self.affinity_mode, temp=self.temperature)
+    def get_laplacian(self, sim_mat):
+        W = get_affinity_mat(sim_mat, mode=self.affinity_mode)
         L = get_L_mat(W, symmetric=True)
         return L
 
-    def get_eigvs(self, scores):
-        L = self.get_laplacian(scores)
+    def get_eigvs(self, sim_mat):
+        L = self.get_laplacian(sim_mat)
         return (1-get_eig(L)[0])
 
-    def __call__(self, scores, cluster=None):
+    def __call__(self, sim_mat, cluster=None):
         if cluster is None: cluster = self.cluster
-        L = self.get_laplacian(scores)
+        L = self.get_laplacian(sim_mat)
         if not cluster:
             return (1-get_eig(L)[0]).clip(0 if self.adjust else -1).sum()
         eigvals, eigvecs = get_eig(L, thres=self.eigv_threshold)
@@ -104,22 +104,22 @@ class SpetralClustering:
         kmeans = KMeans(n_clusters=k, random_state=self.rs, n_init='auto').fit(eigvecs)
         return kmeans.labels_
 
-    def clustered_entropy(self, scores):
+    def clustered_entropy(self, sim_mat):
         from scipy.stats import entropy
-        labels = self(scores, cluster=True)
-        P = torch.softmax(scores, dim=-1)[:, :, 2].cpu().numpy()
+        labels = self(sim_mat, cluster=True)
+        P = torch.softmax(sim_mat, dim=-1)[:, :, 2].cpu().numpy()
         pi = find_equidist(P)
         clustered_pi = pd.Series(pi).groupby(labels).sum().values
         return entropy(clustered_pi)
 
-    def eig_entropy(self, scores):
-        W = get_affinity_mat(scores, mode=self.affinity_mode, temp=self.temperature)
+    def eig_entropy(self, sim_mat):
+        W = get_affinity_mat(sim_mat, mode=self.affinity_mode)
         L = get_L_mat(W, symmetric=True)
         eigs = get_eig(L, eps=1e-4)[0] / W.shape[0]
         return np.exp(- (eigs * np.nan_to_num(np.log(eigs))).sum())
 
-    def proj(self, scores):
-        W = get_affinity_mat(scores, mode=self.affinity_mode, temp=self.temperature)
+    def proj(self, sim_mat):
+        W = get_affinity_mat(sim_mat, mode=self.affinity_mode)
         L = get_L_mat(W, symmetric=True)
         eigvals, eigvecs = get_eig(L, thres=self.eigv_threshold)
         return eigvecs

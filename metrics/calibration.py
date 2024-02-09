@@ -5,12 +5,12 @@ from scipy.stats import rankdata
 def plugin_ece_est(confidences, labels, num_bins, p=2, debias=True):
     '''
     Input:
-      confidences: (C_1, ... , C_n) \in [0, 1]^n
-      labels: (Y_1, ..., Y_n) \in [0, 1]^n
-      num_bins: m
-      debias: If True, debias the plug-in estimator (only for p = 2)
+        confidences: (C_1, ... , C_n) \in [0, 1]^n
+        labels: (Y_1, ..., Y_n) \in [0, 1]^n
+        num_bins: m
+        debias: If True, debias the plug-in estimator (only for p = 2)
     Output:
-      Plug-in estimator of l_p-ECE(f)^p w.r.t. m equal-width bins
+        Plug-in estimator of l_p-ECE(f)^p w.r.t. m equal-width bins
     '''
     # reindex to [0, min(num_bins, len(scores))]
     indexes = np.floor(num_bins * confidences).astype(int) 
@@ -31,10 +31,10 @@ def plugin_ece_est(confidences, labels, num_bins, p=2, debias=True):
 def adaptive_ece_est(confidences, labels):
     '''
     Input:
-      confidences: (C_1, ... , C_n) \in [0, 1]^n
-      labels: (Y_1, ..., Y_n) \in [0, 1]^n
+        confidences: (C_1, ... , C_n) \in [0, 1]^n
+        labels: (Y_1, ..., Y_n) \in [0, 1]^n
     Output:
-      Adaptive debiased estimator of l_p-ECE(f)^2 using the dyadic grid of binning numbers
+        Adaptive debiased estimator of l_p-ECE(f)^2 using the dyadic grid of binning numbers
     '''
 
     num_bins_list = [2**b for b in range(1, np.floor(np.log2(len(confidences))-2).astype(int))]
