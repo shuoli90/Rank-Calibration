@@ -36,4 +36,3 @@ if __name__ == '__main__':
     result = eigv.compute_scores(sc_mat)
 
     print(result)
-    breakpoint()

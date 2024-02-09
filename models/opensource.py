@@ -2,11 +2,15 @@ import torch
 from transformers import pipeline
 import functools
 import numpy as np
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
 
 class TextGenerationModel:
     
     def __init__(self, model_name='meta-llama/Llama-2-7b-hf', **kwargs):
         self.pip = pipeline(model=model_name, device_map="auto", **kwargs)
+        if self.pipe.tokenizer.pad_token is None:
+            self.pipe.tokenizer.pad_token = self.pipe.tokenizer.eos_token
 
     def generate(self, prompts, **kwargs):
         return self.pip(prompts, **kwargs)
@@ -65,3 +69,15 @@ class NLIModel:
             'prob': logits.cpu(),
             'pred': logits.cpu()
         }
+
+class BERTEmbedding:
+    def __init__(self, model_name='sentence-transformers/bert-base-nli-mean-tokens', **kwargs):
+        self.pipe = SentenceTransformer(model_name, **kwargs)
+    
+    @torch.no_grad()
+    def compare(self, question, ans_1, ans_2, **kwargs):
+        prompt1 = [dict(text=f'{question} {_}') for _ in ans_1]
+        prompt2 = [dict(text=f'{question} {_}') for _ in ans_2]
+        emb1 = self.pipe.encode(prompt1, **kwargs)
+        emb2 = self.pipe.encode(prompt2, **kwargs)
+        return np.diag(cosine_similarity(emb1, emb2))

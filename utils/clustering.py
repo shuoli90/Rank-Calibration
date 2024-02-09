@@ -49,7 +49,6 @@ def get_eig(L, thres=None, eps=None):
     if eps is not None:
         L = (1-eps) * L + eps * np.eye(len(L))
     eigvals, eigvecs = np.linalg.eigh(L)
-    breakpoint()
 
     if thres is not None:
         keep_mask = eigvals < thres

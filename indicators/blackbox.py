@@ -8,6 +8,7 @@ import re
 import numpy as np
 import utils.clustering as pc
 from utils import text_processing 
+from models import opensource
 
 CONTRADICT, NEUTRAL, AGREE = 0, 1, 2
 
@@ -29,7 +30,7 @@ def spectral_projected(eigv_threshold, affinity_mode, temperature, sim_mats):
                                                 cluster=False, temperature=temperature)
     return [clusterer.proj(_) for _ in sim_mats]
 
-def jaccard_similarity(generations):
+def jaccard_similarity(prompts, generations):
     # accept generations for batched queries
     rets = []
     for gen in generations:
@@ -136,8 +137,14 @@ class SpectralEigv(BlackBox):
         self.affinity_mode = affinity_mode
         self.temperature = temperature
         self.adjust = adjust
-    
-    def compute_scores(self, sim_mats):
+        if affinity_mode == 'jaccard':
+            self.consistency = jaccard_similarity
+        else:
+            nlimodel = opensource.NLIModel(device='cuda')
+            self.consistency = SemanticConsistency(nlimodel).similarity_mat
+
+    def compute_scores(self, prompt, gen_text, **kwargs):
+        sim_mats = self.consistency(prompt, gen_text)
         clusterer = pc.SpetralClustering(affinity_mode=self.affinity_mode, eigv_threshold=None,
                                                    cluster=False, temperature=self.temperature)
         return [clusterer.get_eigvs(_).clip(0 if self.adjust else -1).sum() for _ in sim_mats]
@@ -190,7 +197,7 @@ class HybridConfidence(BlackBox):
         self.pipe = pipe
         self.score_name = score_name
         self.score = evaluate.load(score_name)
-        self.vb = Verbalized(pipe=pipe)
+        self.vb = VerbalizedConfidence(pipe=pipe)
 
     def compute_scores(self, prompt, gen_text, num_add_trials=5, **kwargs):
         # for a single (query, gen_text) pair

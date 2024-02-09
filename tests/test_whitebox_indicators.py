@@ -28,7 +28,6 @@ if __name__ == '__main__':
 
     perplexity = whitebox.PerplexityScore(pipe=pipe)
     result = perplexity.compute_scores(prompts, references)
-    breakpoint()
     
     # generation probability
     GenerationProbability = whitebox.GenerationProbability(model=pipe.model, tokenizer=pipe.tokenizer)

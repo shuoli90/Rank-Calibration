@@ -48,7 +48,6 @@ if __name__ == '__main__':
 
     generations = [['hello 1', 'hello world 2', 'good morning', 'morning biden']]
     sim = blackbox.jaccard_similarity(generations)
-    print(sim)
     # pipe = gpt.GPTModel()
     # generated = pipe.generate(prompt, max_length=50, num_return_sequences=2, return_full_text=False)
     # gen_text = text_processing.clean_generation(generated[0]['generated_text'])
