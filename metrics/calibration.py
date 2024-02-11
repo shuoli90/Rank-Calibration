@@ -77,3 +77,33 @@ def AUARC(confidences, labels):
             arc = np.mean(labels_tmp)
         arcs.append(arc)
     return np.trapz(arcs, rejection_rate)
+
+def sERCE(correctness, confidences, bins=10, p=1):
+    n = len(correctness)
+    quantiles = np.quantile(confidences, np.linspace(0, 1, bins+1))
+    sorted_indices = np.argsort(confidences)
+    correctness = correctness[sorted_indices]
+    b_map = np.zeros_like(correctness)
+    a_hats = []
+    for idx in range(1, len(quantiles)):
+        lo = int(n * quantiles[idx-1])
+        hi = int(n * quantiles[idx])
+        bin_correctness = correctness[lo:hi]
+        a_hat = np.mean(bin_correctness)
+        b_map[lo:hi] = a_hat
+        a_hats.append(a_hat)
+    sum_tmp = 0
+    for a_hat, quantile in zip(a_hats, quantiles[1:]):
+        count_correnct = np.sum(b_map >= a_hat) / (n-1)
+        count_confidence = quantile
+        if p == 1:
+            tmp = np.abs(count_correnct - count_confidence)
+        elif p == 2:
+            tmp = (count_confidence - count_correnct) ** 2
+        else:
+            raise ValueError("Please specify a valid p!")
+        sum_tmp += tmp * np.sum(b_map == a_hat)
+    result = sum_tmp / n
+    return result
+
+    
