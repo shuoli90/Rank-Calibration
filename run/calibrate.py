@@ -9,8 +9,8 @@ from transformers.pipelines.pt_utils import KeyDataset
 import pandas as pd
 from tqdm import tqdm
 import logging
-from tasks import factoid
-from models import opensource
+from tasks import openbook, closedbook
+from models import opensource, gpt
 from metrics import correctness
 from indicators import whitebox, blackbox
 
@@ -46,7 +46,7 @@ if __name__ == '__main__':
         pipe = opensource.TextGenerationModel(model_name=args.model, torch_dtype=torch.bfloat16)
         if pipe.tokenizer.pad_token_id is None:
             pipe.tokenizer.pad_token = pipe.tokenizer.eos_token
-    NQ_Open = factoid.NQ_Open(pipe.tokenizer, args.split)
+    NQ_Open = closedbook.NQ_Open(pipe.tokenizer, args.split)
     dataset = NQ_Open.get_dataset()
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=False)
 
