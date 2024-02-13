@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.stats import rankdata
+import warnings
 
 
 def plugin_ece_est(confidences, correctness, num_bins, p=2, debias=True):
@@ -92,7 +93,7 @@ def plugin_erce_est(uncertainties, correctness, num_bins=20, p=1):
     sorted_indices = np.argsort(uncertainties)
     correctness = correctness[sorted_indices]
     uncertainties = uncertainties[sorted_indices]
-    a_map = np.zeros_like(correctness)
+    a_map = -np.ones_like(correctness)
     u_map = np.zeros_like(uncertainties)
     a_hats = []
     u_hats = []
@@ -107,8 +108,6 @@ def plugin_erce_est(uncertainties, correctness, num_bins=20, p=1):
         u_map[lo:hi] = u_hat
         a_hats.append(a_hat)
         u_hats.append(u_hat)
-    # breakpoint()
-    # compute sERCE
     sum_tmp = 0
     for a_hat, u_hat in zip(a_hats, u_hats):
         count_correnct = (np.sum(a_map >= a_hat) - (1+np.sum(a_map == a_hat)) // 2) / (n-1)
