@@ -39,7 +39,6 @@ def get_neg_loglikelihoods(model, tokenizer, messages):
             model_output = model(torch.reshape(generation, (1, -1)), labels=target_ids, output_hidden_states=True)  
             hidden_states = model_output['hidden_states']
             average_neg_log_likelihood = model_output['loss']
-
             average_unconditioned_neg_log_likelihood = unconditioned_model_output['loss']
             average_neg_log_likelihoods[generation_index] = average_neg_log_likelihood
             average_unconditioned_neg_log_likelihoods[generation_index] = average_unconditioned_neg_log_likelihood

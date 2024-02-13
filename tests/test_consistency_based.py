@@ -7,8 +7,9 @@ from models import opensource
 
 if __name__ == '__main__':
     # generations = ["Once upon a time: I am confident", "Once upon a time: I am probably", "Once upon a time: I am very unlikely",  'Hello world!', 'Good morning', 'How are you?']
-    generations = ['Leukemia', 'Low Blood Pressure', 'Cervical cancer', 'Cancer in 1953 at 41', 'Breast cancer', 'Tuberculosis', 'Cancer', 'Leukaemia',
-                   'Cancer (in 1953 at age 41)', 'Throat cancer']
+    # generations = ['Leukemia', 'Low Blood Pressure', 'Cervical cancer', 'Cancer in 1953 at 41', 'Breast cancer', 'Tuberculosis', 'Cancer', 'Leukaemia',
+                #    'Cancer (in 1953 at age 41)', 'Throat cancer']
+    generations = ['Pink Floyd', 'Pink Floyd', 'Pink Floyd', 'Pink Floyd', 'Pink Floyd', 'Pink Floyd', 'Pink Floyd', 'Pink Floyd', 'Pink Floyd', 'Pink Floyd']
     # generations = ['Pink Floyd', 'Pink Floyd in Edinburgh', 'Pink Floyd', 'Shambles', 'Pink Floyd', 'Pink Floyd', 'Pink Floyd', 'Pink Floyd', 'Pink Floyd', 'Pink Floyd']
     # jaccard = blackbox.jaccard_similarity([generations])
     # breakpoint()

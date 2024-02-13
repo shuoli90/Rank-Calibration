@@ -7,7 +7,7 @@ from models import opensource
 
 if __name__ == '__main__':
 
-    pipe = opensource.TextGenerationModel(model_name="facebook/opt-350m", torch_dtype=torch.bfloat16)
+    pipe = opensource.TextGenerationModel(model_name="meta-llama/Llama-2-7b-hf", torch_dtype=torch.bfloat16)
     # prompts = ['Once upon a time']
     prompts = ['Once upon a time', 'when the sun rises']
 
@@ -23,7 +23,7 @@ if __name__ == '__main__':
     
     # semantic entropy
     se = whitebox.SemanticEntropy(pipe=pipe)
-    entropy = se.compute_scores([""], [generations])
+    entropy = se.compute_scores(["Q: Dave Gilmore and Roger Waters were in which rock group? A:"], [generations])
     print(entropy)
 
     # perplexity score

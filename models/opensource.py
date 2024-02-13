@@ -7,6 +7,8 @@ class TextGenerationModel:
     
     def __init__(self, model_name='meta-llama/Llama-2-7b-hf', **kwargs):
         self.pipe = pipeline(model=model_name, device_map="auto", **kwargs)
+        if self.pipe.tokenizer.pad_token is None:
+            self.pipe.tokenizer.pad_token = self.pipe.tokenizer.eos_token
 
     def generate(self, prompts, **kwargs):
         return self.pipe(prompts, **kwargs)
