@@ -14,6 +14,7 @@
 ## Calibration metrics:
 - **Our new metric**
 - ADPE: Adaptive debiased estimate for squared ECE
+- ERCE: Expected rank-calibration error 
 - **Baselines**
 - PE: Plug-in estimate for ECE
 - PE2: Plug-in estimate for squared ECE
