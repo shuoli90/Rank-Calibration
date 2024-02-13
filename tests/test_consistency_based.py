@@ -40,5 +40,4 @@ if __name__ == '__main__':
     # )
     result = eigv.compute_scores([generations])
 
-    # print(result)
-    breakpoint()
+    print(result)

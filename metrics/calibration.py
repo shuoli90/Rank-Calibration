@@ -2,15 +2,15 @@ import numpy as np
 from scipy.stats import rankdata
 
 
-def plugin_ece_est(confidences, labels, num_bins, p=2, debias=True):
+def plugin_ece_est(confidences, correctness, num_bins, p=2, debias=True):
     '''
     Input:
         confidences: (C_1, ... , C_n) \in [0, 1]^n
-        labels: (Y_1, ..., Y_n) \in [0, 1]^n
-        num_bins: m
+        correctness: (A_1, ..., A_n) \in [0, 1]^n
+        num_bins: B
         debias: If True, debias the plug-in estimator (only for p = 2)
     Output:
-        Plug-in estimator of l_p-ECE(f)^p w.r.t. m equal-width bins
+        Plug-in estimator of l_p-ECE(f)^p w.r.t. B equal-width bins
     '''
     # reindex to [0, min(num_bins, len(scores))]
     indexes = np.floor(num_bins * confidences).astype(int) 
@@ -19,26 +19,26 @@ def plugin_ece_est(confidences, labels, num_bins, p=2, debias=True):
 
     if p == 2 and debias:
         counts[counts < 2] = 2
-        error = ((np.bincount(indexes, weights=confidences-labels)**2
-              - np.bincount(indexes, weights=(confidences-labels)**2)) / (counts-1)).sum()
+        error = ((np.bincount(indexes, weights=confidences-correctness)**2
+              - np.bincount(indexes, weights=(confidences-correctness)**2)) / (counts-1)).sum()
     else:
         counts[counts == 0] = 1
-        error = (np.abs(np.bincount(indexes, weights=confidences-labels))**p / counts**(p - 1)).sum()
+        error = (np.abs(np.bincount(indexes, weights=confidences-correctness))**p / counts**(p - 1)).sum()
 
     return error / len(confidences)
 
 
-def adaptive_ece_est(confidences, labels):
+def adaptive_ece_est(confidences, correctness):
     '''
     Input:
         confidences: (C_1, ... , C_n) \in [0, 1]^n
-        labels: (Y_1, ..., Y_n) \in [0, 1]^n
+        correctness: (A_1, ..., A_n) \in [0, 1]^n
     Output:
         Adaptive debiased estimator of l_p-ECE(f)^2 using the dyadic grid of binning numbers
     '''
 
     num_bins_list = [2**b for b in range(1, np.floor(np.log2(len(confidences))-2).astype(int))]
-    return np.max([plugin_ece_est(confidences, labels, num_bins, p=2, debias=True) for num_bins in num_bins_list])
+    return np.max([plugin_ece_est(confidences, correctness, num_bins, p=2, debias=True) for num_bins in num_bins_list])
 
 class ECE_estimate():
 
@@ -77,3 +77,50 @@ def AUARC(confidences, labels):
             arc = np.mean(labels_tmp)
         arcs.append(arc)
     return np.trapz(arcs, rejection_rate)
+
+def plugin_erce_est(uncertainties, correctness, num_bins=20, p=1):
+    '''
+    Input:
+        uncertainties: (U_1, ... , U_n) \in R^n
+        correctness: (A_1, ..., A_n) \in [0, 1]^n
+        num_bins: B
+    Output:
+        Plug-in estimator of l_p-ERCE(f)^p w.r.t. B equal-mass bins
+    '''
+    n = len(correctness)
+    bin_endpoints = np.linspace(0, n, num_bins+1).astype('int')
+    sorted_indices = np.argsort(uncertainties)
+    correctness = correctness[sorted_indices]
+    uncertainties = uncertainties[sorted_indices]
+    a_map = np.zeros_like(correctness)
+    u_map = np.zeros_like(uncertainties)
+    a_hats = []
+    u_hats = []
+    # compute a_hat, u_hat and a_map: i -> a_hat, u_map: i -> u_hat
+    for idx_bin in range(1, num_bins+1):
+        lo, hi = bin_endpoints[idx_bin-1], bin_endpoints[idx_bin]
+        if idx_bin == num_bins:  hi += 1
+        bin_correctness = correctness[lo:hi]
+        a_hat = np.mean(bin_correctness)
+        a_map[lo:hi] = a_hat
+        u_hat = np.mean(uncertainties[lo:hi])
+        u_map[lo:hi] = u_hat
+        a_hats.append(a_hat)
+        u_hats.append(u_hat)
+    # breakpoint()
+    # compute sERCE
+    sum_tmp = 0
+    for a_hat, u_hat in zip(a_hats, u_hats):
+        count_correnct = (np.sum(a_map >= a_hat) - (1+np.sum(a_map == a_hat)) // 2) / (n-1)
+        count_uncertainty = (np.sum(u_map <= u_hat) - (1+np.sum(u_map == u_hat)) // 2) / (n-1)
+        if p == 1:
+            tmp = np.abs(count_correnct - count_uncertainty)
+        elif p == 2:
+            tmp = (count_correnct - count_uncertainty) ** 2
+        else:
+            raise ValueError("Please specify a valid order p!")
+        sum_tmp += tmp * np.sum(a_map == a_hat)
+    result = sum_tmp / n
+    return result
+
+    

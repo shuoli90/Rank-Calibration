@@ -30,6 +30,8 @@ if __name__ == '__main__':
 #     Perplexity = whitebox.PerplexityScore(model="facebook/opt-350m")
 #     perplexities = Perplexity.compute_scores(generateds)
 
+    perplexity = whitebox.PerplexityScore(pipe=pipe)
+    result = perplexity.compute_scores(prompts, references)
     # perplexity = whitebox.PerplexityScore(pipe=pipe)
     # result = perplexity.compute_scores(prompts, references)
     # breakpoint()

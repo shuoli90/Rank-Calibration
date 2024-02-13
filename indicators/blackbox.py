@@ -96,7 +96,6 @@ class ICLRobust(BlackBox):
         demonstrations_list = self.demo_transforms(demonstrations) if self.demo_transforms else [demonstrations]
         prompts = [" ".join([*demo, prompt]) for demo in demonstrations_list]
         generations = [self.pipe.generate(prompt_tmp, **kwargs) for prompt_tmp in prompts]
-                [opensource.TextGenerationModel.clean_generation(gen['generated_text']) for gen in generated]
         return generations
     
     def compute_scores(self, batch_prompt, demonstrations, correctness_measure, **kwargs):
@@ -169,19 +168,19 @@ class Degree(BlackBox):
 class SpectralEigv(BlackBox):
     def __init__(self, affinity_mode, semantic_model=None, device='cuda'):
         self.affinity_mode = affinity_mode
-        if affinity_mode != 'jaccard' and not semantic_model:
-            self.sm = SemanticConsistency(opensource.NLIModel(device=device))
-    
-    def compute_scores(self, batch_responses):
-        '''
-        Input:
-            batch_responses: a batch of sequences [[r_1^1, ..., r_{n_1}^1], ..., [r_1^1, ..., r_{n_B}^B]]
-        Output:
-            batch_U: a batch of uncertainties [U^1, ..., U^B]
-        '''
-        batch_sim_mat = jaccard_similarity(batch_responses) if self.affinity_mode == 'jaccard' else self.sm.similarity_mat("", batch_responses)
-        clusterer = pc.SpetralClustering(affinity_mode=self.affinity_mode, cluster=False)
-        return [clusterer.get_eigvs(sim_mat).clip(0).sum() for sim_mat in batch_sim_mat]
+        self.temperature = temperature
+        self.adjust = adjust
+        if affinity_mode == 'jaccard':
+            self.consistency = jaccard_similarity
+        else:
+            nlimodel = opensource.NLIModel(device='cuda')
+            self.consistency = SemanticConsistency(nlimodel).similarity_mat
+
+    def compute_scores(self, prompt, gen_text, **kwargs):
+        sim_mats = self.consistency(prompt, gen_text)
+        clusterer = pc.SpetralClustering(affinity_mode=self.affinity_mode, eigv_threshold=None,
+                                                   cluster=False, temperature=self.temperature)
+        return [clusterer.get_eigvs(_).clip(0 if self.adjust else -1).sum() for _ in sim_mats]
 
 class SelfConsistencyConfidence(BlackBox):
     def __init__(self, pipe, score_name='exact_match'):

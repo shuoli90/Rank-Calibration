@@ -29,6 +29,16 @@ if __name__ == '__main__':
 
 
 
+    # model = gpt.GPTModel()
+    # generated = model.generate([prompt], max_tokens=50, num_return_sequences=1)
+    # gen_text = opensource.TextGenerationModel.clean_generation(generated[0]['generated_text'])
+    
+    # hb = blackbox.Hybrid(model=model)
+    # output = hb.compute_scores(prompt, gen_text)
+    # print(output)
+
+    generations = [['hello 1', 'hello world 2', 'good morning', 'morning biden']]
+    sim = blackbox.jaccard_similarity(generations)
     # pipe = gpt.GPTModel()
     # generated = pipe.generate([prompt], max_tokens=50, num_return_sequences=5)
     # gen_texts = [opensource.TextGenerationModel.clean_generation(gen['generated_text']) for gen in generated]
