@@ -78,31 +78,39 @@ def AUARC(confidences, labels):
         arcs.append(arc)
     return np.trapz(arcs, rejection_rate)
 
-def sERCE(correctness, confidences, bins=10, p=1):
+def sERCE(correctness, uncertainties, bins=10, p=1):
     n = len(correctness)
-    quantiles = np.quantile(confidences, np.linspace(0, 1, bins+1))
-    sorted_indices = np.argsort(confidences)
+    quantiles = np.quantile(uncertainties, np.linspace(0, 1, bins+1))
+    sorted_indices = np.argsort(uncertainties)
     correctness = correctness[sorted_indices]
-    b_map = np.zeros_like(correctness)
+    uncertainties = uncertainties[sorted_indices]
+    a_map = np.zeros_like(correctness)
+    u_map = np.zeros_like(uncertainties)
     a_hats = []
+    u_hats = []
+    # compute a_hat, u_hat and a_map: i -> a_hat, u_map: i -> u_hat
     for idx in range(1, len(quantiles)):
         lo = int(n * quantiles[idx-1])
         hi = int(n * quantiles[idx])
         bin_correctness = correctness[lo:hi]
         a_hat = np.mean(bin_correctness)
-        b_map[lo:hi] = a_hat
+        a_map[lo:hi] = a_hat
+        u_hat = np.mean(uncertainties[lo:hi])
+        u_map[lo:hi] = u_hat
         a_hats.append(a_hat)
+        u_hats.append(u_hat)
+    # compute sERCE
     sum_tmp = 0
-    for a_hat, quantile in zip(a_hats, quantiles[1:]):
-        count_correnct = np.sum(b_map >= a_hat) / (n-1)
-        count_confidence = quantile
+    for a_hat, u_hat in zip(a_hats, u_hats):
+        count_correnct = (np.sum(a_map >= a_hat) - np.sum(a_map == a_hat) // 2) / (n-1)
+        count_uncertainty = (np.sum(u_map <= u_hat) - np.sum(u_map == u_hat) // 2) / (n-1)
         if p == 1:
-            tmp = np.abs(count_correnct - count_confidence)
+            tmp = np.abs(count_correnct - count_uncertainty)
         elif p == 2:
-            tmp = (count_confidence - count_correnct) ** 2
+            tmp = (count_correnct - count_uncertainty) ** 2
         else:
             raise ValueError("Please specify a valid p!")
-        sum_tmp += tmp * np.sum(b_map == a_hat)
+        sum_tmp += tmp * np.sum(a_map == a_hat)
     result = sum_tmp / n
     return result
 
