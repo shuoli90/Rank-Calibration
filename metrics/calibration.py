@@ -89,7 +89,7 @@ def plugin_erce_est(uncertainties, correctness, num_bins=20, p=1):
         Plug-in estimator of l_p-ERCE(f)^p w.r.t. B equal-mass bins
     '''
     n = len(correctness)
-    bin_endpoints = np.linspace(0, n, num_bins+1).astype('int')
+    bin_endpoints = [round(ele) for ele in np.linspace(0, n, num_bins+1)]
     sorted_indices = np.argsort(uncertainties)
     correctness = correctness[sorted_indices]
     uncertainties = uncertainties[sorted_indices]
@@ -100,26 +100,29 @@ def plugin_erce_est(uncertainties, correctness, num_bins=20, p=1):
     # compute a_hat, u_hat and a_map: i -> a_hat, u_map: i -> u_hat
     for idx_bin in range(1, num_bins+1):
         lo, hi = bin_endpoints[idx_bin-1], bin_endpoints[idx_bin]
-        if idx_bin == num_bins:  hi += 1
-        bin_correctness = correctness[lo:hi]
-        a_hat = np.mean(bin_correctness)
-        a_map[lo:hi] = a_hat
-        u_hat = np.mean(uncertainties[lo:hi])
-        u_map[lo:hi] = u_hat
-        a_hats.append(a_hat)
-        u_hats.append(u_hat)
-    sum_tmp = 0
+        if hi > lo:
+            # if idx_bin == num_bins:  hi += 1
+            bin_correctness = correctness[lo:hi]
+            a_hat = np.mean(bin_correctness)
+            a_map[lo:hi] = a_hat
+            u_hat = np.mean(uncertainties[lo:hi]) if hi > lo else None
+            u_map[lo:hi] = u_hat
+            a_hats.append(a_hat)
+            u_hats.append(u_hat)
+    # breakpoint()
+    result = 0
     for a_hat, u_hat in zip(a_hats, u_hats):
-        count_correnct = (np.sum(a_map >= a_hat) - (1+np.sum(a_map == a_hat)) // 2) / (n-1)
-        count_uncertainty = (np.sum(u_map <= u_hat) - (1+np.sum(u_map == u_hat)) // 2) / (n-1)
+
+        count_correnct = (np.sum(a_map >= a_hat) - (1+np.sum(a_map == a_hat)) / 2) / (n-1)
+        count_uncertainty = (np.sum(u_map <= u_hat) - (1+np.sum(u_map == u_hat)) / 2) / (n-1)
         if p == 1:
             tmp = np.abs(count_correnct - count_uncertainty)
         elif p == 2:
             tmp = (count_correnct - count_uncertainty) ** 2
         else:
             raise ValueError("Please specify a valid order p!")
-        sum_tmp += tmp * np.sum(a_map == a_hat)
-    result = sum_tmp / n
+        result += tmp * np.sum(u_map == u_hat) / n
+        # breakpoint()
     return result
 
     

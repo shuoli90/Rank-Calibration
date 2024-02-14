@@ -6,10 +6,10 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from metrics import calibration
 
 if __name__ == '__main__':
-    # correctness = np.random.uniform(0, 1, 100)
-    # confidences = np.random.uniform(0, 1, 100)
-    # result = calibration.plugin_erce_est(1-correctness, correctness, num_bins=20, p=1)
-    # print('Best case', result)
+    correctness = np.random.uniform(0, 1, 100)
+    confidences = np.random.uniform(0, 1, 100)
+    result = calibration.plugin_erce_est(1-correctness, correctness+0.2 * np.random.randn(100), num_bins=20, p=1)
+    print('Best case', result)
     # result = calibration.plugin_erce_est(1/correctness, correctness, num_bins=20, p=1)
     # print('Best case 2', result)
     # result = calibration.plugin_erce_est(1-correctness**2, correctness, num_bins=20, p=1)
@@ -32,8 +32,8 @@ if __name__ == '__main__':
         dir = os.path.join("../tmp", file_name)
         df = pd.read_csv(dir).dropna(axis=0)
         correctness = df['score'].to_numpy()
-        if len(correctness) < bins:
-            continue
+        # if len(correctness) >= bins:
+            # continue
         if 'semantic_entropy' in file_name:
             confidence = -df['confidence'].to_numpy()
         else:
