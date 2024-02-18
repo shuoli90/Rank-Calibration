@@ -9,7 +9,7 @@ from sklearn.cluster import KMeans
 
 def get_affinity_mat(sim_mat, mode='disagreement'):
     if mode == 'jaccard':
-        return sim_mat
+        return sim_mat >= 0.5
     sim_mat = (sim_mat + sim_mat.permute(1,0,2))/2
     if mode == 'disagreement':
         W = sim_mat.argmax(-1) != 0
@@ -71,7 +71,7 @@ def find_equidist(P, eps=1e-4):
 
 class SpetralClustering:
     def __init__(self,
-                 affinity_mode='disagreement_w',
+                 affinity_mode,
                  eigv_threshold=None,
                  cluster=True,
                  temperature=None, adjust=False) -> None:

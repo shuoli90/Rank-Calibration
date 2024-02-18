@@ -157,22 +157,6 @@ class SemanticEntropy(WhiteBox):
             batch_entropy.append(entropy)
         return batch_entropy
 
-# class PerplexityScore(WhiteBox):
-#     def __init__(self, pipe):
-#         self.model = pipe.model
-#         self.tokenizer = pipe.tokenizer
-#         self.device = self.model.device
-    
-#     def compute_scores(self, prompts, references):
-#         sequences = [{
-#             'prompt': torch.tensor(self.tokenizer.encode(prompt)).to(self.model.device),
-#             'generations': torch.tensor(self.tokenizer(ref, padding='longest')['input_ids']).to(self.device),
-#             'id': 0
-#         } for prompt, ref in zip(prompts, references)]
-#         results = get_neg_loglikelihoods(self.model, self.tokenizer, sequences)
-#         normalized_nlls = torch.stack([s['average_neg_log_likelihoods'] for s in results])
-#         return torch.exp(normalized_nlls)
-
 class GenerationProbability(WhiteBox):
     def __init__(self, pipe):
         self.model = pipe.model

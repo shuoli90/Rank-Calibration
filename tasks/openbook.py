@@ -4,7 +4,7 @@ import functools
 
 @functools.lru_cache(1)
 class TriviaQA():
-    def __init__(self, config='rc.wikipedia', split='validation'):
+    def __init__(self, config='rc', split='validation'):
         self.split = split
         self.config = config
         self.dataset = datasets.load_dataset('trivia_qa', config, split=split)
@@ -17,8 +17,12 @@ class TriviaQA():
             else:
                 question = example['question']
                 answers = example['answer']['normalized_aliases']
-                context = example['entity_pages']['wiki_context'][0]
-                example['prompt'] = "Answer the following question basing on the context: " + question + "[SEP]" + " Context: " + context + "[SEP]"+ " Answer: "
+                context = example['search_results']['description']
+                if len(context) == 0:
+                    context = ""
+                else:
+                    context = context[0]
+                example['prompt'] = "Answer the following question shortly according to the context: " + question + "[SEP]" + " Context: " + context + "[SEP]"+ " Answer: "
                 example['answer'] = answers
                 if tokenizer is not None:
                     inputs = tokenizer(example['prompt'], padding=False, truncation=False)
