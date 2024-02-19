@@ -70,3 +70,13 @@ if __name__ == '__main__':
         ax.set_title(f'AUROC vs Correctness Threshold {model} {dataset} {method}')
         ax.grid()
         ax.figure.savefig(f'../tmp/auroc_vs_correctness_{model}_{dataset}_{method}.png')
+
+        fig, ax = plt.subplots()
+        ax.violinplot(df[indicators],
+                  showmeans=False,
+                  showmedians=True)
+        ax.set_title('Uncertainty value distribution')
+        ax.set_xticks([y+1 for y in range(len(indicators))], labels=indicators)
+        plt.grid()
+        plt.savefig(f'../tmp/confidence_histogram_{model}_{dataset}_{method}.png')
+        
