@@ -163,7 +163,7 @@ class GenerationProbability(WhiteBox):
         self.tokenizer = pipe.tokenizer
         self.device = self.model.device
     
-    def compute_scores(self, batch_prompt, batch_responses):
+    def compute_scores(self, batch_prompts, batch_responses):
         '''
         Input:
             batch_prompt: a batch of prompt [p^1, ..., p^B]
@@ -175,7 +175,7 @@ class GenerationProbability(WhiteBox):
             'prompt': torch.tensor(self.tokenizer.encode(prompt)).to(self.device),
             'generations': torch.tensor(self.tokenizer(sequences, padding='longest')['input_ids']).to(self.device),
             'id': 0
-        } for prompt, sequences in zip(batch_prompt, batch_responses)]
+        } for prompt, sequences in zip(batch_prompts, batch_responses)]
         batch_GPs = get_neg_loglikelihoods(self.model, self.tokenizer, messages)
         return batch_GPs
     

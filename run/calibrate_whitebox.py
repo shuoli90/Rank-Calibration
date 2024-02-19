@@ -9,11 +9,9 @@ from transformers.pipelines.pt_utils import KeyDataset
 import pandas as pd
 from tqdm import tqdm
 import logging
-from tasks import openbook, closedbook
 from models import opensource, gpt
-from metrics import correctness
-from indicators import whitebox, blackbox
-from utils import text_processing
+from indicators import whitebox
+import json
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -37,43 +35,58 @@ if __name__ == '__main__':
 
     # set seed
     set_seed(args.seed)
+
     model = args.model.split('/')[-1]
     # load collected data
-    if os.path.exists(f'../tmp/calibrate_{model}_{args.indicator}_{args.dataset}.csv'):
+    if os.path.exists(f'../collected/{model}_{args.dataset}.csv'):
         print("----------------------------------")
-        logging.log(logging.INFO, f"Results already saved to ../tmp/calibrate_{model}_{args.indicator}_{args.dataset}.csv")
+        logging.log(logging.INFO, f"Results already saved to ../tmp/calibrate_{model}_{args.dataset}.csv")
         print("----------------------------------")
-        pd = pd.read_csv(f'../tmp/calibrate_{model}_{args.indicator}_{args.dataset}.csv')
+        data = json.load(open(f'../collected/{model}_{args.dataset}.json'))
     else:
-        raise ValueError(f"Results not found at ../tmp/calibrate_{model}_{args.indicator}_{args.dataset}.csv")
+        raise ValueError(f"Results not found at ../collected/{model}_{args.dataset}.csv")
 
+    if 'gpt' in args.model:
+        pipe = gpt.GPTModel(model_name=args.model)
+    else:
+        pipe = opensource.TextGenerationModel(model_name=args.model, torch_dtype=torch.bfloat16)
+        if pipe.tokenizer.pad_token_id is None:
+            pipe.tokenizer.pad_token = pipe.tokenizer.eos_token
+
+    GenerationProbability = whitebox.GenerationProbability(pipe=pipe)
+    SE = whitebox.SemanticEntropy(
+        pipe=pipe, 
+        device='cuda')
+    
     results = []
-    for idx, row in pd.iterrows():
+    for idx, row in enumerate(data):
         result = {}
         prompts = row['prompt']
         references = row['references']
-        generations = row['generations']
+        generations_greedy = row['greedy']
+        generations_sampled = row['sampled']
 
-        ecc = blackbox.Eccentricity(affinity_mode='jaccard')
-        ecc_u, ecc_c = ecc.compute_scores([prompts], [generations])
-        result['ecc_u'] = ecc_u[0]
-        result['ecc_c'] = ecc_c[0]
+        # log probability
+        probabilities = GenerationProbability.compute_scores(prompts, [generations_greedy])
+        result['normalized_nll'] = -probabilities[0]['average_neg_log_likelihoods'].item()
+        result['unnormalized_nll'] = -probabilities[0]['neg_log_likelihoods'].item()
+        # semantic entropy
+        entropy = SE.compute_scores(prompts, [generations_sampled], normalize=False)
+        result['entropy'] = entropy[0].item()
+        results.append(result)
 
-        degree = blackbox.Degree(affinity_mode='jaccard')
-        degree_u, degree_c= degree.compute_scores([prompts], [generations])
-        result['degree_u'] = degree_u[0]
-        result['degree_c'] = degree_c[0]
+        if idx % 10 == 0:
+            # generate pandas dataframe from results
+            df = pd.DataFrame(results)
+            # save results to csv
+            df.to_csv(f'../tmp/calibrate_{model}_{args.indicator}_whitebox.csv', index=False)
 
-        spectral = blackbox.SpectralEigv(affinity_mode='jaccard', temperature=None)
-        spectral_u = spectral.compute_scores([prompts], [generations])
-        result['spectral_u'] = spectral_u[0]
-    
     # generate pandas dataframe from results
     df = pd.DataFrame(results)
     # save results to csv
-    df.to_csv(f'../tmp/calibrate_{model}_blackbox_{args.dataset}.csv', index=False)
+    df.to_csv(f'../tmp/calibrate_{model}_{args.indicator}_whitebox.csv', index=False)
 
     print("----------------------------------")
-    logging.log(logging.INFO, f"Results saved to ../tmp/calibrate_{model}_blackbox_{args.dataset}.csv")
+    logging.log(logging.INFO, f"Results saved to ../tmp/calibrate_{model}_{args.dataset}_whitebox.csv")
     print("----------------------------------")
 

@@ -23,4 +23,3 @@ if __name__ == '__main__':
     # mmlu = multichoice.MMLU(split='validation').get_dataset(tokenizer)
 
     medmc = multichoice.MedMC(split='validation').get_dataset(tokenizer)
-    breakpoint()

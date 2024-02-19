@@ -4,9 +4,8 @@ from models.opensource import BERTEmbedding
 
 class Score():
 
-    def __init__(self, metric_name='rouge', mode='rouge1', metric_threshold=0.5):
+    def __init__(self, metric_name='rouge', mode='rouge1'):
         self.metric = evaluate.load(metric_name)
-        self.threshold = metric_threshold
         self.mode = mode
     
     def __call__(self, predictions, references, use_aggregator=True):
