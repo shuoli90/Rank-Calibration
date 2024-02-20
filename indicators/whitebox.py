@@ -122,7 +122,7 @@ class SemanticEntropy(WhiteBox):
     def semantic_ids(self, batch_qa_pairs):
         return torch.tensor([self._create_semantic_sets(s) for s in self.similarities(batch_qa_pairs)]).to(self.device)
     
-    def compute_scores(self, batch_prompt, batch_responses, normalize=True):
+    def compute_scores(self, batch_prompt, batch_responses, normalize=False):
         '''
         Input:
             batch_prompt: a batch of prompt [p^1, ..., p^B]
