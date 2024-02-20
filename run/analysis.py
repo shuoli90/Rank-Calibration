@@ -14,7 +14,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--root_dir', type=str, default='../tmp')
     parser.add_argument('--correctness', type=str, default='rouge')
-    parser.add_argument('--mode', type=str, default='rouge1')
+    parser.add_argument('--mode', type=str, default='rougeL')
 
     args = parser.parse_args()
 

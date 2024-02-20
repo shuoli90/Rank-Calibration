@@ -161,7 +161,7 @@ class SpectralEigv(BlackBox):
             self.consistency = jaccard_similarity
         else:
             nlimodel = opensource.NLIModel(device='cuda')
-            self.consistency = SemanticConsistency(nlimodel).similarity_mat
+            self.sm = SemanticConsistency(nlimodel)
 
     def compute_scores(self, batch_prompts, batch_responses, **kwargs):
         sim_mats = jaccard_similarity(batch_responses) if self.affinity_mode == 'jaccard' else self.sm.similarity_mat(batch_prompts, batch_responses)
