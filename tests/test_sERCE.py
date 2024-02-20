@@ -3,7 +3,11 @@ import sys
 import numpy as np
 import pandas as pd
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import matplotlib.pyplot as plt
 from metrics import calibration
+from utils import make_plots
+from matplotlib.ticker import FormatStrFormatter
+
 
 if __name__ == '__main__':
     correctness = np.random.uniform(0, 1, 100)
@@ -67,3 +71,9 @@ if __name__ == '__main__':
     uncertainties = np.random.uniform(0, 1, len(correctness))
     result = calibration.rank_erce_est(correctness, uncertainties, num_bins=bins, p=1)
     print('Worst case', result)
+
+
+    fig, ax = plt.subplots()
+    ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    ax = make_plots.histogram(correctness, uncertainties, fig, ax)
+    plt.savefig('histogram.png')

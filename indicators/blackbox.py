@@ -188,7 +188,7 @@ class SelfConsistencyConfidence(BlackBox):
             Cs = []
             for resp in responses:
                 re_generateds = self.pipe.generate(prompt, num_return_sequences=num_add_trials, max_length=50, do_sample=True, return_full_text=False)
-                re_gen_texts = [opensource.TextGenerationModel.clean_generation(re_generated['generated_text']) for re_generated in re_generateds]
+                re_gen_texts = [text_processing.clean_generation(re_generated['generated_text']) for re_generated in re_generateds]
                 consist_confs = [self.score.compute(references=[resp], predictions=[re_gen_text])[self.score_name] for re_gen_text in re_gen_texts]
                 Cs.append(np.mean(consist_confs))
             batch_Cs.append(Cs)

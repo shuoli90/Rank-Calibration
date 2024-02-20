@@ -26,6 +26,8 @@ if __name__ == '__main__':
     SCORE = correctness.Score(metric_name=args.correctness, mode=args.mode)
 
     for file_name in file_names:
+        if "previous" not in file_name:
+            continue
         print(f'Loading {file_name}')
         model, dataset, method = file_name.split('_')[1:]
         method = method.split('.')[0]
@@ -49,17 +51,17 @@ if __name__ == '__main__':
                 result['degree'] = degree
                 result['spectral'] = spectral
             elif method == 'whitebox':
-                indicators = ['generation_probability', 'semantic_entropy']
+                indicators = ['normalized_nll', 'unnormalized_nll', 'entropy']
                 normalized_nll = row['normalized_nll']
                 unnormalized_nll = row['unnormalized_nll']
-                semantic_entropy = row['semantic_entropy']
+                semantic_entropy = row['entropy']
                 result['normalized_nll'] = normalized_nll
                 result['unnormalized_nll'] = unnormalized_nll
-                result['semantic_entropy'] = semantic_entropy
+                result['entropy'] = semantic_entropy
             s = SCORE(reference, generation_greedy)
             result['score'] = s
             results.append(result)
-        df = pd.DataFrame(results)
+        df = pd.DataFrame(results).dropna(axis=0)
 
         fig, ax = plt.subplots()
         correctness = df['score'].to_numpy()

@@ -2,13 +2,10 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import torch
-import datasets
 import argparse
 from transformers import set_seed
-from transformers.pipelines.pt_utils import KeyDataset
-import pandas as pd
-from tqdm import tqdm
 import logging
+from tqdm import tqdm
 from models import opensource, gpt
 from indicators import whitebox
 import json
@@ -59,8 +56,8 @@ if __name__ == '__main__':
         device='cuda')
     
     results = []
-    for idx, row in enumerate(data):
-        result = {}
+    for idx, row in tqdm(enumerate(data), total=len(data)):
+        result = {'idx':idx}
         prompts = row['prompt']
         references = row['references']
         generations_greedy = row['greedy']
@@ -68,23 +65,17 @@ if __name__ == '__main__':
 
         # log probability
         probabilities = GenerationProbability.compute_scores(prompts, [generations_greedy])
-        result['normalized_nll'] = -probabilities[0]['average_neg_log_likelihoods'].item()
-        result['unnormalized_nll'] = -probabilities[0]['neg_log_likelihoods'].item()
+        result['normalized_nll'] = probabilities[0]['average_neg_log_likelihoods'].item()
+        result['unnormalized_nll'] = probabilities[0]['neg_log_likelihoods'].item()
         # semantic entropy
         entropy = SE.compute_scores(prompts, [generations_sampled], normalize=False)
         result['entropy'] = entropy[0].item()
         results.append(result)
 
         if idx % 10 == 0:
-            # generate pandas dataframe from results
-            df = pd.DataFrame(results)
-            # save results to csv
-            df.to_csv(f'../tmp/calibrate_{model}_{args.indicator}_whitebox.csv', index=False)
-
+            json.dump(results, open(f'../tmp/calibrate_{model}_{args.dataset}_whitebox.json', 'w'))
     # generate pandas dataframe from results
-    df = pd.DataFrame(results)
-    # save results to csv
-    df.to_csv(f'../tmp/calibrate_{model}_{args.indicator}_whitebox.csv', index=False)
+    json.dump(results, open(f'../tmp/calibrate_{model}_{args.dataset}_whitebox.json', 'w'))
 
     print("----------------------------------")
     logging.log(logging.INFO, f"Results saved to ../tmp/calibrate_{model}_{args.dataset}_whitebox.csv")
