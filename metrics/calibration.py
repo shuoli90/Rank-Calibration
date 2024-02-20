@@ -134,10 +134,14 @@ def rank_erce_est(uncertainties, correctness, num_bins=20, p=1):
     a_hats = []
     u_hats = []
     # compute cdf of correctness
+    correct = np.zeros_like(correctness)
     for i in range(len(correctness)):
-        correctness[i] = np.sum(correctness[i] >= correctness) / n
+        correct[i] = np.sum(correctness[i] >= correctness) / n
+    correctness = correct
+    uncertainty = np.zeros_like(uncertainties)
     for i in range(len(uncertainties)):
-        uncertainties[i] = np.sum(uncertainties[i] <= uncertainties) / n
+        uncertainty[i] = np.sum(uncertainties[i] >= uncertainties) / n
+    uncertainties = uncertainty
     # compute a_hat, u_hat and a_map: i -> a_hat, u_map: i -> u_hat
     for idx_bin in range(1, num_bins+1):
         lo, hi = bin_endpoints[idx_bin-1], bin_endpoints[idx_bin]
@@ -152,7 +156,7 @@ def rank_erce_est(uncertainties, correctness, num_bins=20, p=1):
 
     result = 0
     for a_hat, u_hat in zip(a_hats, u_hats):
-        tmp = a_hat - u_hat
+        tmp = a_hat - (1-u_hat)
         if p == 1:
             result += np.abs(tmp)
         elif p == 2:
