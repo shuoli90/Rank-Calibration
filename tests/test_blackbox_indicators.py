@@ -15,7 +15,7 @@ if __name__ == '__main__':
 
     generations = ['Dave Seville', 'Dave Seville', 'Dave Seville', 'Dave Seville', 'Dave Seville', 'Dave Seville was the man behind The Chipmunks', 'Dave Seville', 'Dave Seville', 'Dave Seville', 'Dave Seville', 'Dave Seville', 'Dave Seville', 'Dave Seville', 'Dave Seville', 'Dave Seville', 'Dave Seville', 'Dave Seville', 'Ross Bagdasarian Sr', 'Dave Seville', 'Dave Seville', 'Dave Seville', 'Dave Seville', 'Dave Seville', 'Dave Seville', 'Dave Seville', 'The man behind The Chipmunks was Dave Seville', 'Ross Bagdasarian Sr', 'The man behind The Chipmunks was Dave Seville', 'Dave Seville', 'Ross Bagdasarian, Sr']
     generations = ['biden', 'biden', 'trump', 'trump', 'reagan'] * 6
-    breakpoint() 
+    generations = ['biden'] * 30
     sim = blackbox.jaccard_similarity([generations])
     
     ecc = blackbox.Eccentricity(affinity_mode='disagreement')

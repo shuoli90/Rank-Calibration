@@ -1,12 +1,9 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-import torch
-import datasets
 import argparse
 from transformers import set_seed
-from transformers.pipelines.pt_utils import KeyDataset
-import pandas as pd
+import numpy as np
 from tqdm import tqdm
 import logging
 from indicators import blackbox
@@ -44,12 +41,12 @@ if __name__ == '__main__':
     else:
         raise ValueError(f"Results not found at ../collected/{model}_{args.dataset}.csv")
     
-    ECC = blackbox.Eccentricity(affinity_mode='jaccard')
-    DEGREE = blackbox.Degree(affinity_mode='jaccard')
-    SPECTRAL = blackbox.SpectralEigv(affinity_mode='jaccard', temperature=None)
+    ECC = blackbox.Eccentricity(affinity_mode='disagreement')
+    DEGREE = blackbox.Degree(affinity_mode='disagreement')
+    SPECTRAL = blackbox.SpectralEigv(affinity_mode='disagreement')
 
     results = []
-    for idx, row in tqdm(enumerate(data)):
+    for idx, row in tqdm(enumerate(data), total=len(data)):
         result = {"idx": idx}
         prompts = row['prompt']
         references = row['references']
@@ -57,15 +54,17 @@ if __name__ == '__main__':
         generations_sampled = row['sampled']
 
         ecc_u, ecc_c = ECC.compute_scores([prompts], [generations_sampled])
-        result['ecc_u'] = ecc_u[0]
+        result['ecc_u'] = np.float64(ecc_u[0])
         result['ecc_c'] = ecc_c[0].tolist()
+        result['ecc_c'] = [np.float64(x) for x in result['ecc_c']]
 
         degree_u, degree_c= DEGREE.compute_scores([prompts], [generations_sampled])
-        result['degree_u'] = degree_u[0]
+        result['degree_u'] = np.float64(degree_u[0])
         result['degree_c'] = degree_c[0].tolist()
+        result['degree_c'] = [np.float64(x) for x in result['degree_c']]
 
         spectral_u = SPECTRAL.compute_scores([prompts], [generations_sampled])
-        result['spectral_u'] = spectral_u[0]
+        result['spectral_u'] = np.float64(spectral_u[0])
 
         results.append(result)
         if idx % 10 == 0:
