@@ -32,16 +32,15 @@ def histogram(correctness, uncertainties, fig, ax, num_bins=10, **kwargs):
     # compute cdf of correctness
     correct = np.zeros_like(correctness)
     for i in range(len(correctness)):
-        correct[i] = np.sum(correctness[i] >= correctness) / n
-    correctness = correct
+        correct[i] = (np.sum(correctness[i] >= correctness) - 1) / (n-1)
     uncertainty = np.zeros_like(uncertainties)
     for i in range(len(uncertainties)):
-        uncertainty[i] = np.sum(uncertainties[i] >= uncertainties) / n
+        uncertainty[i] = (np.sum(uncertainties[i] >= uncertainties)-1) / (n-1)
     # compute a_hat, u_hat and a_map: i -> a_hat, u_map: i -> u_hat
     for idx_bin in range(1, num_bins+1):
         lo, hi = bin_endpoints[idx_bin-1], bin_endpoints[idx_bin]
         if hi > lo:
-            bin_correctness = correctness[lo:hi]
+            bin_correctness = correct[lo:hi]
             a_hat = np.mean(bin_correctness)
             a_map[lo:hi] = a_hat
             u_hat = np.mean(uncertainty[lo:hi]) if hi > lo else None

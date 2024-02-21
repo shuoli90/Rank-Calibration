@@ -16,11 +16,12 @@ if __name__ == '__main__':
     generations = ['Dave Seville', 'Dave Seville', 'Dave Seville', 'Dave Seville', 'Dave Seville', 'Dave Seville was the man behind The Chipmunks', 'Dave Seville', 'Dave Seville', 'Dave Seville', 'Dave Seville', 'Dave Seville', 'Dave Seville', 'Dave Seville', 'Dave Seville', 'Dave Seville', 'Dave Seville', 'Dave Seville', 'Ross Bagdasarian Sr', 'Dave Seville', 'Dave Seville', 'Dave Seville', 'Dave Seville', 'Dave Seville', 'Dave Seville', 'Dave Seville', 'The man behind The Chipmunks was Dave Seville', 'Ross Bagdasarian Sr', 'The man behind The Chipmunks was Dave Seville', 'Dave Seville', 'Ross Bagdasarian, Sr']
     sim = blackbox.jaccard_similarity([generations])
     
-    ecc = blackbox.Eccentricity(affinity_mode='jaccard')
+    ecc = blackbox.Eccentricity()
     ecc_u, ecc_c = ecc.compute_scores([prompt], [generations])
 
-    degree = blackbox.Degree(affinity_mode='jaccard')
+    degree = blackbox.Degree()
     degree_u, degree_c= degree.compute_scores([prompt], [generations])
 
-    spectral = blackbox.SpectralEigv(affinity_mode='jaccard', temperature=None)
+    spectral = blackbox.SpectralEigv(temperature=1.0)
     spectral_u = spectral.compute_scores([prompt], [generations])
+    breakpoint()
