@@ -18,13 +18,13 @@ if __name__ == '__main__':
     generations = ['biden'] * 29 + ['trump']
     sim = blackbox.jaccard_similarity([generations])
     
-    ecc = blackbox.Eccentricity(affinity_mode='disagreement')
+    ecc = blackbox.Eccentricity()
     ecc_u, ecc_c = ecc.compute_scores([prompt], [generations])
     breakpoint()
 
-    degree = blackbox.Degree(affinity_mode='disagreement')
+    degree = blackbox.Degree()
     degree_u, degree_c= degree.compute_scores([prompt], [generations])
 
-    spectral = blackbox.SpectralEigv(affinity_mode='disagreement', temperature=1.0)
+    spectral = blackbox.SpectralEigv(temperature=1.0)
     spectral_u = spectral.compute_scores([prompt], [generations])
     breakpoint()

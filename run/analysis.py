@@ -64,15 +64,31 @@ if __name__ == '__main__':
             results.append(result)
         df = pd.DataFrame(results).dropna(axis=0)
 
-        fig, ax = plt.subplots()
-        correctness = df['score'].to_numpy()
+        # fig, ax = plt.subplots()
+        # correctness = df['score'].to_numpy()
+        # for indicator in indicators:
+        #     confidence = -df[indicator].to_numpy()
+        #     thresholds = np.linspace(np.min(correctness)+epsilon, np.max(correctness)-epsilon, 10)
+        #     ax = make_plots.AUROC_vs_Correctness(correctness, confidence, thresholds, ax=ax, label=indicator)
+        # ax.set_title(f'AUROC vs Correctness Threshold {model} {dataset} {method}')
+        # ax.grid()
+        # ax.figure.savefig(f'../tmp/auroc_vs_correctness_{model}_{dataset}_{method}.png')
+
+        # fig, ax = plt.subplots()
+        # ax.violinplot(df[indicators],
+        #           showmeans=False,
+        #           showmedians=True)
+        # ax.set_title('Uncertainty value distribution')
+        # ax.set_xticks([y+1 for y in range(len(indicators))], labels=indicators)
+        # plt.grid()
+        # plt.savefig(f'../tmp/confidence_histogram_{model}_{dataset}_{method}.png')
+        correctness_score = df['score'].to_numpy()
         for indicator in indicators:
-            confidence = -df[indicator].to_numpy()
-            thresholds = np.linspace(np.min(correctness)+epsilon, np.max(correctness)-epsilon, 10)
-            ax = make_plots.AUROC_vs_Correctness(correctness, confidence, thresholds, ax=ax, label=indicator)
-        ax.set_title(f'AUROC vs Correctness Threshold {model} {dataset} {method}')
-        ax.grid()
-        ax.figure.savefig(f'../tmp/auroc_vs_correctness_{model}_{dataset}_{method}.png')
+            fig, ax = plt.subplots()
+            uncertainties = df[indicator].to_numpy()
+            ax = make_plots.histogram(correctness_score, uncertainties, fig, ax)
+            plt.savefig(f'../tmp/erce_{model}_{dataset}_{indicator}.png')
+            breakpoint()
 
         fig, ax = plt.subplots()
         ax.violinplot(df[indicators],
