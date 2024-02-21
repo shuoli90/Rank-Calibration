@@ -115,15 +115,22 @@ def plugin_erce_est(uncertainties, correctness, num_bins=20, p=1):
         count_correnct = (np.sum(a_map >= a_hat) - (1+np.sum(a_map == a_hat)) / 2) / (n-1)
         count_uncertainty = (np.sum(u_map <= u_hat) - (1+np.sum(u_map == u_hat)) / 2) / (n-1)
         if p == 1:
-            tmp = np.abs(count_correnct - count_uncertainty)
+            result += np.abs(count_correnct - count_uncertainty) * np.sum(u_map == u_hat) / n
         elif p == 2:
-            tmp = (count_correnct - count_uncertainty) ** 2
+            result += (count_correnct - count_uncertainty) ** 2 * np.sum(u_map == u_hat) / n
         else:
             raise ValueError("Please specify a valid order p!")
-        result += tmp * np.sum(u_map == u_hat) / n
     return result
 
 def rank_erce_est(uncertainties, correctness, num_bins=20, p=1):
+    '''
+    Input:
+        uncertainties: (U_1, ... , U_n) \in R^n
+        correctness: (A_1, ..., A_n) \in [0, 1]^n
+        num_bins: B
+    Output:
+        Plug-in estimator of l_p-ERCE(f)^p w.r.t. B equal-mass bins
+    '''
     n = len(correctness)
     bin_endpoints = [round(ele) for ele in np.linspace(0, n, num_bins+1)]
     sorted_indices = np.argsort(uncertainties)
@@ -134,22 +141,20 @@ def rank_erce_est(uncertainties, correctness, num_bins=20, p=1):
     a_hats = []
     u_hats = []
     # compute cdf of correctness
-    correct = np.zeros_like(correctness)
+    correct_ranks = np.zeros_like(correctness)
     for i in range(len(correctness)):
-        correct[i] = np.sum(correctness[i] >= correctness) / n
-    correctness = correct
-    uncertainty = np.zeros_like(uncertainties)
+        correct_ranks[i] = (np.sum(correctness[i] >= correctness)-1) / (n-1)
+    uncertainty_ranks = np.zeros_like(uncertainties)
     for i in range(len(uncertainties)):
-        uncertainty[i] = np.sum(uncertainties[i] >= uncertainties) / n
-    uncertainties = uncertainty
+        uncertainty_ranks[i] = (np.sum(uncertainties[i] >= uncertainties)-1) / (n-1)
     # compute a_hat, u_hat and a_map: i -> a_hat, u_map: i -> u_hat
     for idx_bin in range(1, num_bins+1):
         lo, hi = bin_endpoints[idx_bin-1], bin_endpoints[idx_bin]
         if hi > lo:
-            bin_correctness = correctness[lo:hi]
-            a_hat = np.mean(bin_correctness)
+            bin_correct_ranks = correct_ranks[lo:hi]
+            a_hat = np.mean(bin_correct_ranks)
             a_map[lo:hi] = a_hat
-            u_hat = np.mean(uncertainties[lo:hi]) if hi > lo else None
+            u_hat = np.mean(uncertainty_ranks[lo:hi]) if hi > lo else None
             u_map[lo:hi] = u_hat
             a_hats.append(a_hat)
             u_hats.append(u_hat)
@@ -158,12 +163,59 @@ def rank_erce_est(uncertainties, correctness, num_bins=20, p=1):
     for a_hat, u_hat in zip(a_hats, u_hats):
         tmp = a_hat - (1-u_hat)
         if p == 1:
-            result += np.abs(tmp)
+            result += np.abs(tmp) * np.sum(u_map == u_hat) / n
         elif p == 2:
-            result += tmp ** 2
+            result += tmp ** 2 * np.sum(u_map == u_hat) / n
         else:
             raise ValueError("Please specify a valid order p!")
-    return result / num_bins
+    return result
 
-
+def debias_rank_erce_est(uncertainties, correctness, num_bins=20):
+    '''
+    Input:
+        uncertainties: (U_1, ... , U_n) \in R^n
+        correctness: (A_1, ..., A_n) \in [0, 1]^n
+        num_bins: B
+    Output:
+        Plug-in estimator of l_p-ERCE(f)^p w.r.t. B equal-mass bins
+    '''
+    n = len(correctness)
+    bin_endpoints = [round(ele) for ele in np.linspace(0, n, num_bins+1)]
+    sorted_indices = np.argsort(uncertainties)
+    correctness = correctness[sorted_indices]
+    uncertainties = uncertainties[sorted_indices]
+    # compute cdf of correctness
+    correct_ranks = np.zeros_like(correctness)
+    for i in range(len(correctness)):
+        correct_ranks[i] = (np.sum(correctness[i] >= correctness)-1) / (n-1)
+    uncertainty_ranks = np.zeros_like(uncertainties)
+    for i in range(len(uncertainties)):
+        uncertainty_ranks[i] = (np.sum(uncertainties[i] >= uncertainties)-1) / (n-1)
+    result = 0
+    for idx_bin in range(1, num_bins+1):
+        lo, hi = bin_endpoints[idx_bin-1], bin_endpoints[idx_bin]
+        for i in range(lo, hi):
+            for j in range(i+1, hi):
+                correct_rank_i, correct_rank_j \
+                    = correct_ranks[i]+(correct_ranks[i]-(correctness[i]<=correctness[j]))/(n-2),\
+                    correct_ranks[j]+(correct_ranks[j]-(correctness[j]<=correctness[i]))/(n-2)
+                uncertainty_rank_i, uncertainty_rank_j \
+                    = uncertainty_ranks[i]+(uncertainty_ranks[i]-(uncertainties[i]<=uncertainties[j]))/(n-2),\
+                    uncertainty_ranks[j]+(uncertainty_ranks[j]-(uncertainties[j]<=uncertainties[i]))/(n-2)
+                result += 2*(correct_rank_i-1+uncertainty_rank_i)*(correct_rank_j-1+uncertainty_rank_j)/((n-1)*(hi-lo))
+    return result
     
+def adaptive_rank_erce_est(uncertainties, correctness):
+    '''
+    Input:
+        uncertainties: (U_1, ... , U_n) \in R^n
+        correctness: (A_1, ..., A_n) \in [0, 1]^n
+        num_bins: B
+    Output:
+        Plug-in estimator of l_p-ERCE(f)^p w.r.t. B equal-mass bins
+    '''
+    n = len(correctness)
+    num_bins_list = [2**b for b in range(2, np.floor(np.log2(n)-2).astype(int))]
+    if not num_bins_list:
+        raise ValueError("The evaluation dataset is too small!")
+    return np.max([debias_rank_erce_est(uncertainties, correctness, num_bins) for num_bins in num_bins_list])
