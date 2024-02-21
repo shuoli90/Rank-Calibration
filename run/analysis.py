@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import json
+from sklearn.metrics import roc_curve
 from utils import make_plots
 from metrics import correctness
 epsilon = 1e-3
@@ -26,7 +27,7 @@ if __name__ == '__main__':
     SCORE = correctness.Score(metric_name=args.correctness, mode=args.mode)
 
     for file_name in file_names:
-        if "previous" not in file_name:
+        if "previous" in file_name:
             continue
         print(f'Loading {file_name}')
         model, dataset, method = file_name.split('_')[1:]
@@ -82,3 +83,34 @@ if __name__ == '__main__':
         plt.grid()
         plt.savefig(f'../tmp/confidence_histogram_{model}_{dataset}_{method}.png')
         
+        if 'entropy' in indicators:
+            fig, ax = plt.subplots()
+            threshold = 0.5
+            y_true = correctness >= threshold
+            y_score = -df['entropy']
+            # plot roc curve
+            fpr, tpr, _ = roc_curve(y_true, y_score)
+            ax.plot(fpr, tpr, label='ROC curve')
+            ax.plot([0, 1], [0, 1], 'k--', label='Random')
+            ax.set_xlabel('False Positive Rate')
+            ax.set_ylabel('True Positive Rate')
+            ax.set_title('ROC curve')
+            ax.legend()
+            ax.grid()
+            plt.savefig(f'../tmp/roc_curve_{model}_{dataset}_{method}.png')
+        
+        if 'degree' in indicators:
+            fig, ax = plt.subplots()
+            threshold = 0.5
+            y_true = correctness >= threshold
+            y_score = -df['degree']
+            # plot roc curve
+            fpr, tpr, _ = roc_curve(y_true, y_score)
+            ax.plot(fpr, tpr, label='ROC curve')
+            ax.plot([0, 1], [0, 1], 'k--', label='Random')
+            ax.set_xlabel('False Positive Rate')
+            ax.set_ylabel('True Positive Rate')
+            ax.set_title('ROC curve')
+            ax.legend()
+            ax.grid()
+            plt.savefig(f'../tmp/roc_curve_{model}_{dataset}_{method}_degree.png')

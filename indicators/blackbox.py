@@ -128,7 +128,8 @@ class Eccentricity(BlackBox):
         batch_sim_mats = jaccard_similarity(batch_responses) if self.affinity_mode == 'jaccard' else self.sm.similarity_mat(batch_prompts, batch_responses)
         batch_projected = spectral_projected(self.affinity_mode, batch_sim_mats, threshold=0.1)
         batch_Cs = [-np.linalg.norm(projected-projected.mean(0)[None, :],2,axis=1) for projected in batch_projected]
-        batch_U = [np.linalg.norm(projected-projected.mean(0)[None, :],2).clip(-1, 1) for projected in batch_projected]
+        # batch_U = [np.linalg.norm(projected-projected.mean(0)[None, :],2).clip(-1, 1) for projected in batch_projected]
+        batch_U = [np.linalg.norm(projected-projected.mean(0)[None, :], 2) for projected in batch_projected]
         return batch_U, batch_Cs
     
 class Degree(BlackBox):
@@ -161,7 +162,7 @@ class SpectralEigv(BlackBox):
             self.consistency = jaccard_similarity
         else:
             nlimodel = opensource.NLIModel(device='cuda')
-            self.consistency = SemanticConsistency(nlimodel).similarity_mat
+            self.sm = SemanticConsistency(nlimodel)
 
     def compute_scores(self, batch_prompts, batch_responses, **kwargs):
         sim_mats = jaccard_similarity(batch_responses) if self.affinity_mode == 'jaccard' else self.sm.similarity_mat(batch_prompts, batch_responses)
