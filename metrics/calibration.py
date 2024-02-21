@@ -164,7 +164,7 @@ def rank_erce_est(uncertainties, correctness, num_bins=20, p=1):
         tmp = a_hat - (1-u_hat)
         if p == 1:
             result += np.abs(tmp) * np.sum(u_map == u_hat) / n
-        elif p == 2:
+        elif p == 2:     
             result += tmp ** 2 * np.sum(u_map == u_hat) / n
         else:
             raise ValueError("Please specify a valid order p!")
