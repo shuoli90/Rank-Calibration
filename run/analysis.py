@@ -82,51 +82,59 @@ if __name__ == '__main__':
         # ax.set_xticks([y+1 for y in range(len(indicators))], labels=indicators)
         # plt.grid()
         # plt.savefig(f'../tmp/confidence_histogram_{model}_{dataset}_{method}.png')
-        correctness_score = df['score'].to_numpy()
+        correctness_score = df['score'].to_numpy() + np.random.uniform(-0.1, 0.1, len(df['score']))
+        # plot the histogram of correctness score
+        fig, ax = plt.subplots()
+        ax.hist(correctness_score, bins=20)
+        ax.set_title('Correctness score distribution')
+        ax.set_xlabel('Correctness score')
+        ax.set_ylabel('Frequency')
+        plt.grid()
+        plt.savefig(f'../tmp/correctness_histogram_{model}_{dataset}_{method}.png')
+
         for indicator in indicators:
             fig, ax = plt.subplots()
             uncertainties = df[indicator].to_numpy()
-            ax = make_plots.histogram(correctness_score, uncertainties, fig, ax)
-            plt.savefig(f'../tmp/erce_{model}_{dataset}_{indicator}.png')
-            breakpoint()
+            ax = make_plots.histogram_alternative(correctness_score, uncertainties, fig, ax)
+            plt.savefig(f'../tmp/erce_alternative{model}_{dataset}_{indicator}.png')
 
-        fig, ax = plt.subplots()
-        ax.violinplot(df[indicators],
-                  showmeans=False,
-                  showmedians=True)
-        ax.set_title('Uncertainty value distribution')
-        ax.set_xticks([y+1 for y in range(len(indicators))], labels=indicators)
-        plt.grid()
-        plt.savefig(f'../tmp/confidence_histogram_{model}_{dataset}_{method}.png')
+        # fig, ax = plt.subplots()
+        # ax.violinplot(df[indicators],
+        #           showmeans=False,
+        #           showmedians=True)
+        # ax.set_title('Uncertainty value distribution')
+        # ax.set_xticks([y+1 for y in range(len(indicators))], labels=indicators)
+        # plt.grid()
+        # plt.savefig(f'../tmp/confidence_histogram_{model}_{dataset}_{method}.png')
         
-        if 'entropy' in indicators:
-            fig, ax = plt.subplots()
-            threshold = 0.5
-            y_true = correctness >= threshold
-            y_score = -df['entropy']
-            # plot roc curve
-            fpr, tpr, _ = roc_curve(y_true, y_score)
-            ax.plot(fpr, tpr, label='ROC curve')
-            ax.plot([0, 1], [0, 1], 'k--', label='Random')
-            ax.set_xlabel('False Positive Rate')
-            ax.set_ylabel('True Positive Rate')
-            ax.set_title('ROC curve')
-            ax.legend()
-            ax.grid()
-            plt.savefig(f'../tmp/roc_curve_{model}_{dataset}_{method}.png')
+        # if 'entropy' in indicators:
+        #     fig, ax = plt.subplots()
+        #     threshold = 0.5
+        #     y_true = correctness_score >= threshold
+        #     y_score = -df['entropy']
+        #     # plot roc curve
+        #     fpr, tpr, _ = roc_curve(y_true, y_score)
+        #     ax.plot(fpr, tpr, label='ROC curve')
+        #     ax.plot([0, 1], [0, 1], 'k--', label='Random')
+        #     ax.set_xlabel('False Positive Rate')
+        #     ax.set_ylabel('True Positive Rate')
+        #     ax.set_title('ROC curve')
+        #     ax.legend()
+        #     ax.grid()
+        #     plt.savefig(f'../tmp/roc_curve_{model}_{dataset}_{method}.png')
         
-        if 'degree' in indicators:
-            fig, ax = plt.subplots()
-            threshold = 0.5
-            y_true = correctness >= threshold
-            y_score = -df['degree']
-            # plot roc curve
-            fpr, tpr, _ = roc_curve(y_true, y_score)
-            ax.plot(fpr, tpr, label='ROC curve')
-            ax.plot([0, 1], [0, 1], 'k--', label='Random')
-            ax.set_xlabel('False Positive Rate')
-            ax.set_ylabel('True Positive Rate')
-            ax.set_title('ROC curve')
-            ax.legend()
-            ax.grid()
-            plt.savefig(f'../tmp/roc_curve_{model}_{dataset}_{method}_degree.png')
+        # if 'degree' in indicators:
+        #     fig, ax = plt.subplots()
+        #     threshold = 0.5
+        #     y_true = correctness >= threshold
+        #     y_score = -df['degree']
+        #     # plot roc curve
+        #     fpr, tpr, _ = roc_curve(y_true, y_score)
+        #     ax.plot(fpr, tpr, label='ROC curve')
+        #     ax.plot([0, 1], [0, 1], 'k--', label='Random')
+        #     ax.set_xlabel('False Positive Rate')
+        #     ax.set_ylabel('True Positive Rate')
+        #     ax.set_title('ROC curve')
+        #     ax.legend()
+        #     ax.grid()
+        #     plt.savefig(f'../tmp/roc_curve_{model}_{dataset}_{method}_degree.png')
