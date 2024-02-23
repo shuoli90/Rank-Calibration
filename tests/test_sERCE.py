@@ -175,6 +175,10 @@ if __name__ == '__main__':
     m = int(n**(2 / (4*s + 1)))//2
     rho =75
     perturbed_fu = perturb_dist(fu, s, m, rho)
-    # a = np.random.binomial(1, 1-fu, n).astype('float')+1e-6*np.random.randn(n) # discrete label
-    a = 1-fu + 1*np.random.randn(n)
-    print(calibration.debias_rank_erce_est(u, a, 20))
+    a = np.random.binomial(1, 1-fu, n)
+    # a = np.random.binomial(1, 1-perturbed_fu, n)
+    # a = 1-perturbed_fu+3e-1*np.random.randn(n) # discrete label
+    # a = 1-fu + 1*np.random.randn(n)
+    print(calibration.plugin_erce_est(u, a, 20, 1))
+    print(calibration.rank_erce_est(u, a, 20, 1))
+    print(calibration.nested_rank_erce_est(u, a, 20, 1))

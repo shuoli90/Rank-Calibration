@@ -93,8 +93,8 @@ def plugin_erce_est(uncertainties, correctness, num_bins=20, p=1):
     sorted_indices = np.argsort(uncertainties)
     correctness = correctness[sorted_indices]
     uncertainties = uncertainties[sorted_indices]
-    a_map = -np.ones_like(correctness)
-    u_map = np.zeros_like(uncertainties)
+    a_map = -np.ones(n)
+    u_map = np.zeros(n)
     a_hats = []
     u_hats = []
     # compute a_hat, u_hat and a_map: i -> a_hat, u_map: i -> u_hat
@@ -140,7 +140,7 @@ def rank_erce_est(uncertainties, correctness, num_bins=20, p=1):
     u_rank_map = np.zeros(num_bins)
     num_count = np.zeros(num_bins)
     # compute cdf of correctness
-    correct_ranks, uncertainty_ranks = np.zeros_like(correctness), np.zeros_like(uncertainties)
+    correct_ranks, uncertainty_ranks = np.zeros(n), np.zeros(n)
     for i in range(n):
         correct_ranks[i] = (np.sum(correctness[i] >= correctness)-1) / (n-1)
         uncertainty_ranks[i] = (np.sum(uncertainties[i] >= uncertainties)-1) / (n-1)
@@ -181,11 +181,11 @@ def debias_rank_erce_est(uncertainties, correctness, num_bins=20):
     correctness = correctness[sorted_indices]
     uncertainties = uncertainties[sorted_indices]
     # compute cdf of correctness
-    correct_ranks, uncertainty_ranks = np.zeros_like(correctness), np.zeros_like(uncertainties)
+    correct_ranks, uncertainty_ranks = np.zeros(n), np.zeros(n)
     for i in range(n):
-        correct_ranks[i] = (np.sum(correctness[i] >= correctness)-1) / (n-1)
+        correct_ranks[i] = (np.sum(correctness[i] >= correctness)-1)/(n-1)
         # breakpoint()
-        uncertainty_ranks[i] = (np.sum(uncertainties[i] >= uncertainties)-1) / (n-1)
+        uncertainty_ranks[i] = (np.sum(uncertainties[i] >= uncertainties)-1)/(n-1)
     # breakpoint()
     result = 0
     for idx_bin in range(1, num_bins+1):
@@ -234,7 +234,7 @@ def nested_rank_erce_est(uncertainties, correctness, num_bins=20, p=1):
     u_map = np.zeros(num_bins)
     num_count = np.zeros(num_bins)
     # compute cdf of correctness
-    correct_ranks, uncertainty_ranks = np.zeros_like(correctness), np.zeros_like(uncertainties)
+    correct_ranks, uncertainty_ranks = np.zeros(n), np.zeros(n)
     for i in range(n):
         correct_ranks[i] = (np.sum(correctness[i] >= correctness)-1) / (n-1)
         uncertainty_ranks[i] = (np.sum(uncertainties[i] >= uncertainties)-1) / (n-1)
@@ -250,9 +250,9 @@ def nested_rank_erce_est(uncertainties, correctness, num_bins=20, p=1):
 
     a_map_ranks = np.zeros(num_bins)
     u_map_ranks = np.zeros(num_bins)
-    for i in range(n):
-        a_map_ranks[i] = (np.sum(a_map[i] >= a_map)-1) / (num_bins-1)
-        u_map_ranks[i] = (np.sum(u_map[i] >= u_map)-1) / (num_bins-1)
+    for idx in range(num_bins):
+        a_map_ranks[idx] = (np.sum(a_map[idx] >= a_map)-1) / (num_bins-1)
+        u_map_ranks[idx] = (np.sum(u_map[idx] >= u_map)-1) / (num_bins-1)
 
     result = 0
     for idx in range(num_bins):
