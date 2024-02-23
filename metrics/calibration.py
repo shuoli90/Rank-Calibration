@@ -136,10 +136,9 @@ def rank_erce_est(uncertainties, correctness, num_bins=20, p=1):
     sorted_indices = np.argsort(uncertainties)
     correctness = correctness[sorted_indices]
     uncertainties = uncertainties[sorted_indices]
-    a_map = -np.ones_like(correctness)
-    u_map = np.zeros_like(uncertainties)
-    a_hats = []
-    u_hats = []
+    a_rank_map = np.zeros(num_bins)
+    u_rank_map = np.zeros(num_bins)
+    num_count = np.zeros(num_bins)
     # compute cdf of correctness
     correct_ranks, uncertainty_ranks = np.zeros_like(correctness), np.zeros_like(uncertainties)
     for i in range(n):
@@ -150,20 +149,19 @@ def rank_erce_est(uncertainties, correctness, num_bins=20, p=1):
         lo, hi = bin_endpoints[idx_bin-1], bin_endpoints[idx_bin]
         if hi > lo:
             bin_correct_ranks = correct_ranks[lo:hi]
-            a_hat = np.mean(bin_correct_ranks)
-            a_map[lo:hi] = a_hat
-            u_hat = np.mean(uncertainty_ranks[lo:hi]) if hi > lo else None
-            u_map[lo:hi] = u_hat
-            a_hats.append(a_hat)
-            u_hats.append(u_hat)
+            a_rank_hat = np.mean(bin_correct_ranks)
+            a_rank_map[idx_bin-1] = a_rank_hat
+            u_rank_hat = np.mean(uncertainty_ranks[lo:hi])
+            u_rank_map[idx_bin-1] = u_rank_hat
+        num_count[idx_bin-1] = hi-lo
 
     result = 0
-    for a_hat, u_hat in zip(a_hats, u_hats):
-        tmp = a_hat - (1-u_hat)
+    for idx in range(num_bins):
+        tmp = a_rank_map[idx] - (1-u_rank_map[idx])
         if p == 1:
-            result += np.abs(tmp) * np.sum(u_map == u_hat) / n
+            result += np.abs(tmp) * num_count[idx] / n
         elif p == 2:     
-            result += tmp ** 2 * np.sum(u_map == u_hat) / n
+            result += tmp ** 2 * num_count[idx] / n
         else:
             raise ValueError("Please specify a valid order p!")
     return result
@@ -217,3 +215,52 @@ def adaptive_rank_erce_est(uncertainties, correctness):
     if not num_bins_list:
         raise ValueError("The evaluation dataset is too small!")
     return np.max([debias_rank_erce_est(uncertainties, correctness, num_bins) for num_bins in num_bins_list])
+
+def nested_rank_erce_est(uncertainties, correctness, num_bins=20, p=1):
+    '''
+    Input:
+        uncertainties: (U_1, ... , U_n) \in R^n
+        correctness: (A_1, ..., A_n) \in [0, 1]^n
+        num_bins: B
+    Output:
+        Plug-in estimator of l_p-ERCE(f)^p w.r.t. B equal-mass bins
+    '''
+    n = len(correctness)
+    bin_endpoints = [round(ele) for ele in np.linspace(0, n, num_bins+1)]
+    sorted_indices = np.argsort(uncertainties)
+    correctness = correctness[sorted_indices]
+    uncertainties = uncertainties[sorted_indices]
+    a_map = np.zeros(num_bins)
+    u_map = np.zeros(num_bins)
+    num_count = np.zeros(num_bins)
+    # compute cdf of correctness
+    correct_ranks, uncertainty_ranks = np.zeros_like(correctness), np.zeros_like(uncertainties)
+    for i in range(n):
+        correct_ranks[i] = (np.sum(correctness[i] >= correctness)-1) / (n-1)
+        uncertainty_ranks[i] = (np.sum(uncertainties[i] >= uncertainties)-1) / (n-1)
+    for idx_bin in range(1, num_bins+1):
+        lo, hi = bin_endpoints[idx_bin-1], bin_endpoints[idx_bin]
+        if hi > lo:
+            bin_correct_ranks = correct_ranks[lo:hi]
+            a_hat = np.mean(bin_correct_ranks)
+            a_map[idx_bin-1] = a_hat
+            u_hat = np.mean(uncertainty_ranks[lo:hi])
+            u_map[idx_bin-1] = u_hat
+        num_count[idx_bin-1] = hi-lo
+
+    a_map_ranks = np.zeros(num_bins)
+    u_map_ranks = np.zeros(num_bins)
+    for i in range(n):
+        a_map_ranks[i] = (np.sum(a_map[i] >= a_map)-1) / (num_bins-1)
+        u_map_ranks[i] = (np.sum(u_map[i] >= u_map)-1) / (num_bins-1)
+
+    result = 0
+    for idx in range(num_bins):
+        tmp = a_map_ranks[idx] - (1-u_map_ranks[idx])
+        if p == 1:
+            result += np.abs(tmp) * num_count[idx] / n
+        elif p == 2:     
+            result += tmp ** 2 * num_count[idx] / n
+        else:
+            raise ValueError("Please specify a valid order p!")
+    return result
