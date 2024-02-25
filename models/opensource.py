@@ -7,11 +7,12 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 class TextGenerationModel:
     
-    def __init__(self, model_name='meta-llama/Llama-2-7b-hf', **kwargs):
-        self.pipe = pipeline(model=model_name, device_map="auto", **kwargs)
+    def __init__(self, model_name='meta-llama/Llama-2-7b-hf', device=7,**kwargs):
+        self.pipe = pipeline(model=model_name, device=device, use_fast=True, **kwargs)
         if self.pipe.tokenizer.pad_token is None:
             self.pipe.tokenizer.pad_token = self.pipe.tokenizer.eos_token
-
+    
+    @torch.no_grad()
     def generate(self, prompts, **kwargs):
         return self.pipe(prompts, **kwargs)
     

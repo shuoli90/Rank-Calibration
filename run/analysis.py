@@ -16,7 +16,6 @@ if __name__ == '__main__':
     parser.add_argument('--root_dir', type=str, default='../tmp')
     parser.add_argument('--correctness', type=str, default='rouge')
     parser.add_argument('--mode', type=str, default='rougeL')
-
     args = parser.parse_args()
 
     # list all csv files in the root directory
@@ -24,13 +23,16 @@ if __name__ == '__main__':
     file_names = [file for file in os.listdir(args.root_dir) if file.endswith('.json')]
 
     # setup generation correctness score
-    SCORE = correctness.Score(metric_name=args.correctness, mode=args.mode)
-
+    if args.correctness in ['rouge', 'bleu', 'meteor']:
+        SCORE = correctness.Score(metric_name=args.correctness, mode=args.mode)
+    elif args.correctness in ['bert_similarity']:
+        SCORE = correctness.BertSimilarity()
+    
     for file_name in file_names:
-        if "previous" in file_name:
+        if "newprompt" not in file_name:
             continue
         print(f'Loading {file_name}')
-        model, dataset, method = file_name.split('_')[1:]
+        model, dataset, method = file_name.split('_')[1:4]
         method = method.split('.')[0]
         print('loading', os.path.join(args.root_dir, file_name))
         data = json.load(open(os.path.join(args.root_dir, file_name)))
@@ -59,30 +61,34 @@ if __name__ == '__main__':
                 result['normalized_nll'] = normalized_nll
                 result['unnormalized_nll'] = unnormalized_nll
                 result['entropy'] = semantic_entropy
-            s = SCORE(reference, generation_greedy)
+            if args.correctness in ['rouge', 'bleu', 'meteor']:
+                s = SCORE(reference, generation_greedy)
+            else:
+                s = SCORE("", reference, generation_greedy)[0]
             result['score'] = s
             results.append(result)
         df = pd.DataFrame(results).dropna(axis=0)
 
-        # fig, ax = plt.subplots()
-        # correctness = df['score'].to_numpy()
-        # for indicator in indicators:
-        #     confidence = -df[indicator].to_numpy()
-        #     thresholds = np.linspace(np.min(correctness)+epsilon, np.max(correctness)-epsilon, 10)
-        #     ax = make_plots.AUROC_vs_Correctness(correctness, confidence, thresholds, ax=ax, label=indicator)
-        # ax.set_title(f'AUROC vs Correctness Threshold {model} {dataset} {method}')
-        # ax.grid()
-        # ax.figure.savefig(f'../tmp/auroc_vs_correctness_{model}_{dataset}_{method}.png')
+        fig, ax = plt.subplots()
+        correctness_score = df['score'].to_numpy()
+        for indicator in indicators:
+            confidence = -df[indicator].to_numpy()
+            thresholds = np.linspace(np.min(correctness_score)+epsilon, np.max(correctness_score)-epsilon, 10)
+            ax = make_plots.AUROC_vs_Correctness(correctness_score, confidence, thresholds, ax=ax, label=indicator)
+        ax.set_title(f'AUROC vs Correctness Threshold {model} {dataset} {method} {args.correctness}')
+        ax.grid()
+        ax.figure.savefig(f'../tmp/auroc_vs_correctness_{model}_{dataset}_{method}_{args.correctness}.png')
 
-        # fig, ax = plt.subplots()
-        # ax.violinplot(df[indicators],
-        #           showmeans=False,
-        #           showmedians=True)
-        # ax.set_title('Uncertainty value distribution')
-        # ax.set_xticks([y+1 for y in range(len(indicators))], labels=indicators)
-        # plt.grid()
-        # plt.savefig(f'../tmp/confidence_histogram_{model}_{dataset}_{method}.png')
-        correctness_score = df['score'].to_numpy() + np.random.uniform(-0.1, 0.1, len(df['score']))
+        fig, ax = plt.subplots()
+        ax.violinplot(df[indicators],
+                  showmeans=False,
+                  showmedians=True)
+        ax.set_title('Uncertainty value distribution')
+        ax.set_xticks([y+1 for y in range(len(indicators))], labels=indicators)
+        plt.grid()
+        plt.savefig(f'../tmp/confidence_histogram_{model}_{dataset}_{method}_{args.correctness}.png')
+
+        correctness_score = df['score'].to_numpy()
         # plot the histogram of correctness score
         fig, ax = plt.subplots()
         ax.hist(correctness_score, bins=20)
@@ -90,51 +96,57 @@ if __name__ == '__main__':
         ax.set_xlabel('Correctness score')
         ax.set_ylabel('Frequency')
         plt.grid()
-        plt.savefig(f'../tmp/correctness_histogram_{model}_{dataset}_{method}.png')
+        plt.savefig(f'../tmp/correctness_histogram_{model}_{dataset}_{method}_{args.correctness}.png')
+
+        for indicator in indicators:
+            fig, ax = plt.subplots()
+            uncertainties = df[indicator].to_numpy()
+            ax = make_plots.histogram(correctness_score, uncertainties, fig, ax)
+            plt.savefig(f'../tmp/erce_{model}_{dataset}_{indicator}_{args.correctness}.png')
 
         for indicator in indicators:
             fig, ax = plt.subplots()
             uncertainties = df[indicator].to_numpy()
             ax = make_plots.histogram_alternative(correctness_score, uncertainties, fig, ax)
-            plt.savefig(f'../tmp/erce_alternative{model}_{dataset}_{indicator}.png')
+            plt.savefig(f'../tmp/erce_alternative{model}_{dataset}_{indicator}_{args.correctness}.png')
 
-        # fig, ax = plt.subplots()
-        # ax.violinplot(df[indicators],
-        #           showmeans=False,
-        #           showmedians=True)
-        # ax.set_title('Uncertainty value distribution')
-        # ax.set_xticks([y+1 for y in range(len(indicators))], labels=indicators)
-        # plt.grid()
-        # plt.savefig(f'../tmp/confidence_histogram_{model}_{dataset}_{method}.png')
+        fig, ax = plt.subplots()
+        ax.violinplot(df[indicators],
+                  showmeans=False,
+                  showmedians=True)
+        ax.set_title('Uncertainty value distribution')
+        ax.set_xticks([y+1 for y in range(len(indicators))], labels=indicators)
+        plt.grid()
+        plt.savefig(f'../tmp/confidence_histogram_{model}_{dataset}_{method}_{args.correctness}.png')
         
-        # if 'entropy' in indicators:
-        #     fig, ax = plt.subplots()
-        #     threshold = 0.5
-        #     y_true = correctness_score >= threshold
-        #     y_score = -df['entropy']
-        #     # plot roc curve
-        #     fpr, tpr, _ = roc_curve(y_true, y_score)
-        #     ax.plot(fpr, tpr, label='ROC curve')
-        #     ax.plot([0, 1], [0, 1], 'k--', label='Random')
-        #     ax.set_xlabel('False Positive Rate')
-        #     ax.set_ylabel('True Positive Rate')
-        #     ax.set_title('ROC curve')
-        #     ax.legend()
-        #     ax.grid()
-        #     plt.savefig(f'../tmp/roc_curve_{model}_{dataset}_{method}.png')
+        if 'entropy' in indicators:
+            fig, ax = plt.subplots()
+            threshold = 0.5
+            y_true = correctness_score >= threshold
+            y_score = -df['entropy']
+            # plot roc curve
+            fpr, tpr, _ = roc_curve(y_true, y_score)
+            ax.plot(fpr, tpr, label='ROC curve')
+            ax.plot([0, 1], [0, 1], 'k--', label='Random')
+            ax.set_xlabel('False Positive Rate')
+            ax.set_ylabel('True Positive Rate')
+            ax.set_title('ROC curve')
+            ax.legend()
+            ax.grid()
+            plt.savefig(f'../tmp/roc_curve_{model}_{dataset}_{method}_{args.correctness}_entropy.png')
         
-        # if 'degree' in indicators:
-        #     fig, ax = plt.subplots()
-        #     threshold = 0.5
-        #     y_true = correctness >= threshold
-        #     y_score = -df['degree']
-        #     # plot roc curve
-        #     fpr, tpr, _ = roc_curve(y_true, y_score)
-        #     ax.plot(fpr, tpr, label='ROC curve')
-        #     ax.plot([0, 1], [0, 1], 'k--', label='Random')
-        #     ax.set_xlabel('False Positive Rate')
-        #     ax.set_ylabel('True Positive Rate')
-        #     ax.set_title('ROC curve')
-        #     ax.legend()
-        #     ax.grid()
-        #     plt.savefig(f'../tmp/roc_curve_{model}_{dataset}_{method}_degree.png')
+        if 'degree' in indicators:
+            fig, ax = plt.subplots()
+            threshold = 0.5
+            y_true = correctness_score >= threshold
+            y_score = -df['degree']
+            # plot roc curve
+            fpr, tpr, _ = roc_curve(y_true, y_score)
+            ax.plot(fpr, tpr, label='ROC curve')
+            ax.plot([0, 1], [0, 1], 'k--', label='Random')
+            ax.set_xlabel('False Positive Rate')
+            ax.set_ylabel('True Positive Rate')
+            ax.set_title('ROC curve')
+            ax.legend()
+            ax.grid()
+            plt.savefig(f'../tmp/roc_curve_{model}_{dataset}_{method}_{args.correctness}_degree.png')

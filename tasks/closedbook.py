@@ -14,8 +14,16 @@ class NQ_Open:
         def process_instance(example):
             # https://github.com/zlin7/UQ-NLG
             all_answers = example.pop('answer')
-            example['answer'] = all_answers
-            example['prompt'] = 'Question: ' + example['question'] + ' Answer:'
+            example['answers'] = all_answers
+            prompt = f"""
+            Question: when are the fa cup semi finals played. [SEP] Answer: the new Wembley Stadium.[SEP]
+            Question: who was alf married to in home and away [SEP] Answer: Ailsa Stewart.[SEP] 
+            Question: what is the name of the first book in the twilight series [SEP] Answer: Twilight.[SEP] 
+            Question: when is tornado season in the united states [SEP] Answer: March through June.[SEP] 
+            Question: where did the idea of a messiah come from [SEP] Answer: Judaism.[SEP] 
+            Question: {example['question']} [SEP] Answer:
+            """
+            example['prompt'] = prompt
             inputs = self.tokenizer(example['prompt'], padding=False, truncation=False)
             outputs = self.tokenizer(all_answers[0], padding=False, truncation=False)
             example['input_ids'] = inputs['input_ids']

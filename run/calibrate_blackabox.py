@@ -21,6 +21,7 @@ if __name__ == '__main__':
     parser.add_argument('--indicator', type=str, default='semantic_entropy')
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--task', type=str, default='text-generation')
+    parser.add_argument("--device", type=int, default=0)
     args = parser.parse_args()
 
     print("----------------------------------")
@@ -33,17 +34,17 @@ if __name__ == '__main__':
     set_seed(args.seed)
     model = args.model.split('/')[-1]
     # load collected data
-    if os.path.exists(f'../collected/{model}_{args.dataset}.csv'):
+    if os.path.exists(f'../collected/{model}_{args.dataset}.json'):
         print("----------------------------------")
-        logging.log(logging.INFO, f"Results already saved to ../tmp/calibrate_{model}_{args.dataset}.csv")
+        logging.log(logging.INFO, f"Results already saved to ../tmp/calibrate_{model}_{args.dataset}.json")
         print("----------------------------------")
         data = json.load(open(f'../collected/{model}_{args.dataset}.json'))
     else:
-        raise ValueError(f"Results not found at ../collected/{model}_{args.dataset}.csv")
+        raise ValueError(f"Results not found at ../collected/{model}_{args.dataset}.json")
     
-    ECC = blackbox.Eccentricity(affinity_mode='disagreement')
-    DEGREE = blackbox.Degree(affinity_mode='disagreement')
-    SPECTRAL = blackbox.SpectralEigv(affinity_mode='disagreement')
+    ECC = blackbox.Eccentricity(affinity_mode='disagreement', device=args.device)
+    DEGREE = blackbox.Degree(affinity_mode='disagreement', device=args.device)
+    SPECTRAL = blackbox.SpectralEigv(affinity_mode='disagreement', device=args.device)
 
     results = []
     for idx, row in tqdm(enumerate(data), total=len(data)):
@@ -68,11 +69,11 @@ if __name__ == '__main__':
 
         results.append(result)
         if idx % 10 == 0:
-            json.dump(results, open(f'../tmp/calibrate_{model}_{args.dataset}_blackbox.json', 'w'))
+            json.dump(results, open(f'../tmp/calibrate_{model}_{args.dataset}_blackbox_newprompt.json', 'w'))
     
-    json.dump(results, open(f'../tmp/calibrate_{model}_{args.dataset}_blackbox.json', 'w'))
+    json.dump(results, open(f'../tmp/calibrate_{model}_{args.dataset}_blackbox_newprompt.json', 'w'))
 
     print("----------------------------------")
-    logging.log(logging.INFO, f"Results saved to ../tmp/calibrate_{model}_{args.dataset}_blackbox.csv")
+    logging.log(logging.INFO, f"Results saved to ../tmp/calibrate_{model}_{args.dataset}_blackbox_newprompt.csv")
     print("----------------------------------")
 

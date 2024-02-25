@@ -35,13 +35,13 @@ if __name__ == '__main__':
 
     model = args.model.split('/')[-1]
     # load collected data
-    if os.path.exists(f'../collected/{model}_{args.dataset}.csv'):
+    if os.path.exists(f'../collected/{model}_{args.dataset}_new.json'):
         print("----------------------------------")
-        logging.log(logging.INFO, f"Results already saved to ../tmp/calibrate_{model}_{args.dataset}.csv")
+        logging.log(logging.INFO, f"Results already saved to ../tmp/calibrate_{model}_{args.dataset}.json")
         print("----------------------------------")
-        data = json.load(open(f'../collected/{model}_{args.dataset}.json'))
+        data = json.load(open(f'../collected/{model}_{args.dataset}_new.json'))
     else:
-        raise ValueError(f"Results not found at ../collected/{model}_{args.dataset}.csv")
+        raise ValueError(f"Results not found at ../collected/{model}_{args.dataset}_new.json")
 
     if 'gpt' in args.model:
         pipe = gpt.GPTModel(model_name=args.model)

@@ -114,7 +114,7 @@ class Eccentricity(BlackBox):
     def __init__(self, affinity_mode='disagreement', semantic_model=None, device='cuda'):
         self.affinity_mode = affinity_mode
         if affinity_mode != 'jaccard' and not semantic_model:
-            self.sm = SemanticConsistency(opensource.NLIModel(device=device))
+            self.sm = SemanticConsistency(opensource.NLIModel(device=f'cuda:{device}'))
     
     def compute_scores(self, batch_prompts, batch_responses, **kwargs):
         '''
@@ -127,18 +127,15 @@ class Eccentricity(BlackBox):
         '''
         batch_sim_mats = jaccard_similarity(batch_responses) if self.affinity_mode == 'jaccard' else self.sm.similarity_mat(batch_prompts, batch_responses)
         batch_projected = spectral_projected(self.affinity_mode, batch_sim_mats, threshold=0.1)
-        # batch_Cs = [-np.linalg.norm(projected-projected.mean(0)[None, :],2,axis=1) for projected in batch_projected]
-        # batch_U = [np.linalg.norm(projected-projected.mean(0)[None, :],2).clip(-1, 1) for projected in batch_projected]
-        # batch_U = [np.linalg.norm(projected-projected.mean(0)[None, :], 2) for projected in batch_projected]
-        # return batch_U, batch_Cs
-        ds = np.asarray([np.linalg.norm(x -x.mean(0)[None, :],2,axis=1) for x in batch_projected])
-        return np.linalg.norm(ds, 2,1), ds
+        batch_Cs = [-np.linalg.norm(projected-projected.mean(0)[None, :],2,axis=1) for projected in batch_projected]
+        batch_U = [np.linalg.norm(projected-projected.mean(0)[None, :], 2) for projected in batch_projected]
+        return batch_U, batch_Cs
     
 class Degree(BlackBox):
     def __init__(self, affinity_mode='disagreement', semantic_model=None, device='cuda'):
         self.affinity_mode = affinity_mode
         if affinity_mode != 'jaccard' and not semantic_model:
-            self.sm = SemanticConsistency(opensource.NLIModel(device=device))
+            self.sm = SemanticConsistency(opensource.NLIModel(device=f'cuda:{device}'))
     
     def compute_scores(self, batch_prompts, batch_responses, **kwargs):
         '''
@@ -151,11 +148,9 @@ class Degree(BlackBox):
         '''
         batch_sim_mat = jaccard_similarity(batch_responses) if self.affinity_mode == 'jaccard' else self.sm.similarity_mat(batch_prompts, batch_responses)
         batch_W = [pc.get_affinity_mat(sim_mat, self.affinity_mode) for sim_mat in batch_sim_mat]
-        # batch_Cs = [np.mean(W, axis=1) for W in batch_W]
-        # batch_U = [1/W.shape[0]-np.sum(W)/W.shape[0]**2 for W in batch_W]
-        # return batch_U, batch_Cs
-        ret = np.asarray([np.sum(1-_, axis=1) for _ in batch_W])
-        return ret.mean(1), ret
+        batch_Cs = [np.mean(W, axis=1) for W in batch_W]
+        batch_U = [1/W.shape[0]-np.sum(W)/W.shape[0]**2 for W in batch_W]
+        return batch_U, batch_Cs
 
 class SpectralEigv(BlackBox):
     def __init__(self, affinity_mode, temperature=1.0, semantic_model=None, adjust=False, device='cuda'):
@@ -165,7 +160,7 @@ class SpectralEigv(BlackBox):
         if affinity_mode == 'jaccard':
             self.consistency = jaccard_similarity
         else:
-            nlimodel = opensource.NLIModel(device='cuda')
+            nlimodel = opensource.NLIModel(device=f'cuda:{device}')
             self.sm = SemanticConsistency(nlimodel)
 
     def compute_scores(self, batch_prompts, batch_responses, **kwargs):
