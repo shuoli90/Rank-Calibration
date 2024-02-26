@@ -69,9 +69,11 @@ if __name__ == '__main__':
     # collect generation
     results = []
     for idx, batch in tqdm(enumerate(dataloader), total=len(dataloader)):
+        if args.dataset == 'meadow' and idx > 1000:
+            break
         result = {}
         prompts = batch['prompt']
-        generated = pipe.generate(prompts, max_length=1024, do_sample=False, return_full_text=False)[0]
+        generated = pipe.generate(prompts, max_length=2048, do_sample=False, return_full_text=False)[0]
         generations = [text_processing.clean_generation(element['generated_text']) for element in generated]
         references = [text for text in batch['answers']]
         result['id'] = idx
@@ -79,7 +81,7 @@ if __name__ == '__main__':
         result['references'] = references
         result['greedy'] = generations
 
-        generateds = pipe.generate(prompts, max_length=1024, num_return_sequences=10, temperature=1.0, do_sample=True, top_p=0.9, return_full_text=False)
+        generateds = pipe.generate(prompts, max_length=2048, num_return_sequences=10, temperature=1.0, do_sample=True, top_p=0.9, return_full_text=False)
         generations = [text_processing.clean_generation(element['generated_text']) for element in generateds[0]]
         result['sampled'] = generations
         results.append(result)

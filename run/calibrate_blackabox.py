@@ -21,7 +21,7 @@ if __name__ == '__main__':
     parser.add_argument('--indicator', type=str, default='semantic_entropy')
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--task', type=str, default='text-generation')
-    parser.add_argument("--device", type=int, default=0)
+    parser.add_argument("--device", type=int, default=1)
     args = parser.parse_args()
 
     print("----------------------------------")
@@ -43,8 +43,8 @@ if __name__ == '__main__':
         raise ValueError(f"Results not found at ../collected/{model}_{args.dataset}.json")
     
     ECC = blackbox.Eccentricity(affinity_mode='disagreement', device=args.device)
-    DEGREE = blackbox.Degree(affinity_mode='disagreement', device=args.device)
-    SPECTRAL = blackbox.SpectralEigv(affinity_mode='disagreement', device=args.device)
+    DEGREE = blackbox.Degree(affinity_mode='disagreement', device=args.device, semantic_model=ECC.sm)
+    SPECTRAL = blackbox.SpectralEigv(affinity_mode='disagreement', device=args.device, semantic_model=ECC.sm)
 
     results = []
     for idx, row in tqdm(enumerate(data), total=len(data)):
@@ -54,18 +54,18 @@ if __name__ == '__main__':
         generations_greedy = row['greedy'] 
         generations_sampled = row['sampled']
 
-        ecc_u, ecc_c = ECC.compute_scores([prompts], [generations_sampled])
+        ecc_u, ecc_c, sim_mats = ECC.compute_scores([prompts], [generations_sampled])
         result['ecc_u'] = np.float64(ecc_u[0])
         result['ecc_c'] = ecc_c[0].tolist()
         result['ecc_c'] = [np.float64(x) for x in result['ecc_c']]
 
-        degree_u, degree_c= DEGREE.compute_scores([prompts], [generations_sampled])
+        degree_u, degree_c, sim_mats = DEGREE.compute_scores([prompts], [generations_sampled], batch_sim_mats=sim_mats)
         result['degree_u'] = np.float64(degree_u[0])
         result['degree_c'] = degree_c[0].tolist()
         result['degree_c'] = [np.float64(x) for x in result['degree_c']]
 
-        spectral_u = SPECTRAL.compute_scores([prompts], [generations_sampled])
-        result['spectral_u'] = np.float64(spectral_u[0])
+        spectral_u, spectral_c, sim_mats = SPECTRAL.compute_scores([prompts], [generations_sampled], sim_mats=sim_mats)
+        result['spectral_u'] = np.float64(spectral_u[0]) 
 
         results.append(result)
         if idx % 10 == 0:
