@@ -111,10 +111,12 @@ class ReparaphraseRobust(BlackBox):
         raise NotImplementedError
     
 class Eccentricity(BlackBox):
-    def __init__(self, affinity_mode='disagreement', semantic_model=None, device='cuda'):
+    def __init__(self, affinity_mode='disagreement', semantic_model=None, device=0):
         self.affinity_mode = affinity_mode
         if affinity_mode != 'jaccard' and not semantic_model:
             self.sm = SemanticConsistency(opensource.NLIModel(device=f'cuda:{device}'))
+        elif affinity_mode != 'jaccard':
+            self.sm = semantic_model
     
     def compute_scores(self, batch_prompts, batch_responses, batch_sim_mats=None, **kwargs):
         '''
@@ -130,10 +132,10 @@ class Eccentricity(BlackBox):
         batch_projected = spectral_projected(self.affinity_mode, batch_sim_mats, threshold=0.1)
         batch_Cs = [-np.linalg.norm(projected-projected.mean(0)[None, :],2,axis=1) for projected in batch_projected]
         batch_U = [np.linalg.norm(projected-projected.mean(0)[None, :], 2) for projected in batch_projected]
-        return batch_U, batch_Cs
+        return batch_U, batch_Cs, batch_sim_mats
     
 class Degree(BlackBox):
-    def __init__(self, affinity_mode='disagreement', semantic_model=None, device='cuda'):
+    def __init__(self, affinity_mode='disagreement', semantic_model=None, device=0):
         self.affinity_mode = affinity_mode
         if affinity_mode != 'jaccard' and not semantic_model:
             self.sm = SemanticConsistency(opensource.NLIModel(device=f'cuda:{device}'))
@@ -148,14 +150,14 @@ class Degree(BlackBox):
             batch_Cs: a batch of confidence sequences [[C_1^1, ..., C_{n_1}^1], ..., [C_1^B, ..., C_{n_B}^B]]
         '''
         if batch_sim_mats is None:
-            batch_sim_mat = jaccard_similarity(batch_responses) if self.affinity_mode == 'jaccard' else self.sm.similarity_mat(batch_prompts, batch_responses)
-        batch_W = [pc.get_affinity_mat(sim_mat, self.affinity_mode) for sim_mat in batch_sim_mat]
+            batch_sim_mats = jaccard_similarity(batch_responses) if self.affinity_mode == 'jaccard' else self.sm.similarity_mat(batch_prompts, batch_responses)
+        batch_W = [pc.get_affinity_mat(sim_mat, self.affinity_mode) for sim_mat in batch_sim_mats]
         batch_Cs = [np.mean(W, axis=1) for W in batch_W]
         batch_U = [1/W.shape[0]-np.sum(W)/W.shape[0]**2 for W in batch_W]
-        return batch_U, batch_Cs
+        return batch_U, batch_Cs, batch_sim_mats
 
 class SpectralEigv(BlackBox):
-    def __init__(self, affinity_mode, temperature=1.0, semantic_model=None, adjust=False, device='cuda'):
+    def __init__(self, affinity_mode='disagreement', temperature=1.0, semantic_model=None, adjust=False, device=0):
         self.affinity_mode = affinity_mode
         self.temperature = temperature
         self.adjust = adjust
@@ -170,7 +172,7 @@ class SpectralEigv(BlackBox):
             sim_mats = jaccard_similarity(batch_responses) if self.affinity_mode == 'jaccard' else self.sm.similarity_mat(batch_prompts, batch_responses)
         clusterer = pc.SpetralClustering(affinity_mode=self.affinity_mode, eigv_threshold=None,
                                                    cluster=False, temperature=self.temperature)
-        return [clusterer.get_eigvs(_).clip(0 if self.adjust else -1).sum() for _ in sim_mats]
+        return [clusterer.get_eigvs(_).clip(0 if self.adjust else -1).sum() for _ in sim_mats], None, sim_mats
 
 class SelfConsistencyConfidence(BlackBox):
     def __init__(self, pipe, score_name='exact_match'):
