@@ -1,6 +1,6 @@
 def clean_generation(generation):
     strings_to_filter_on = [
-                '.', ',', 'Q:', 'A:', 'question:', 'answer:', 'Question:', 'Answer:', 'Questions:', 'questions:', 'QUESTION:',
+                '\n', '.', ',', 'Q:', 'A:', 'question:', 'answer:', 'Question:', 'Answer:', 'Questions:', 'questions:', 'QUESTION:',
                 'ANSWER:'
             ]
     for string in strings_to_filter_on:

@@ -22,6 +22,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--task', type=str, default='text-generation')
     parser.add_argument("--device", type=int, default=1)
+    parser.add_argument('--affinity_mode', type=str, default='disagreement')
     args = parser.parse_args()
 
     print("----------------------------------")
@@ -42,9 +43,9 @@ if __name__ == '__main__':
     else:
         raise ValueError(f"Results not found at ../collected/{model}_{args.dataset}.json")
     
-    ECC = blackbox.Eccentricity(affinity_mode='disagreement', device=args.device)
-    DEGREE = blackbox.Degree(affinity_mode='disagreement', device=args.device, semantic_model=ECC.sm)
-    SPECTRAL = blackbox.SpectralEigv(affinity_mode='disagreement', device=args.device, semantic_model=ECC.sm)
+    ECC = blackbox.Eccentricity(affinity_mode=args.affinity_mode, device=args.device)
+    DEGREE = blackbox.Degree(affinity_mode=args.affinity_mode, device=args.device, semantic_model=ECC.sm)
+    SPECTRAL = blackbox.SpectralEigv(affinity_mode=args.affinity_mode, device=args.device, semantic_model=ECC.sm)
 
     results = []
     for idx, row in tqdm(enumerate(data), total=len(data)):
@@ -54,7 +55,11 @@ if __name__ == '__main__':
         generations_greedy = row['greedy'] 
         generations_sampled = row['sampled']
 
-        ecc_u, ecc_c, sim_mats = ECC.compute_scores([prompts], [generations_sampled])
+        # split out the last question
+        prompts = ['Question: ' + prompt.split('Question: ')[-1] for prompt in prompts]
+
+        # ecc_u, ecc_c, sim_mats = ECC.compute_scores([prompts], [generations_sampled])
+        ecc_u, ecc_c, sim_mats = ECC.compute_scores([[""]], [generations_sampled])
         result['ecc_u'] = np.float64(ecc_u[0])
         result['ecc_c'] = ecc_c[0].tolist()
         result['ecc_c'] = [np.float64(x) for x in result['ecc_c']]
@@ -65,15 +70,15 @@ if __name__ == '__main__':
         result['degree_c'] = [np.float64(x) for x in result['degree_c']]
 
         spectral_u, spectral_c, sim_mats = SPECTRAL.compute_scores([prompts], [generations_sampled], sim_mats=sim_mats)
-        result['spectral_u'] = np.float64(spectral_u[0]) 
+        result['spectral_u'] = np.float64(spectral_u[0])
 
         results.append(result)
         if idx % 10 == 0:
-            json.dump(results, open(f'../tmp/calibrate_{model}_{args.dataset}_blackbox_newprompt.json', 'w'))
+            json.dump(results, open(f'../tmp/calibrate_{model}_{args.dataset}_{args.affinity_mode}_blackbox.json', 'w'))
     
-    json.dump(results, open(f'../tmp/calibrate_{model}_{args.dataset}_blackbox_newprompt.json', 'w'))
+    json.dump(results, open(f'../tmp/calibrate_{model}_{args.dataset}_{args.affinity_mode}_blackbox.json', 'w'))
 
     print("----------------------------------")
-    logging.log(logging.INFO, f"Results saved to ../tmp/calibrate_{model}_{args.dataset}_blackbox_newprompt.csv")
+    logging.log(logging.INFO, f"Results saved to ../tmp/calibrate_{model}_{args.dataset}_{args.affinity_mode}_blackbox.csv")
     print("----------------------------------")
 
