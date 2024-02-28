@@ -17,8 +17,6 @@ import json
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    # parser.add_argument('--model', type=str, default='google/gemma-7b-it')
-    # parser.add_argument('--model', type=str, default='mistralai/Mistral-7B-Instruct-v0.2')
     parser.add_argument('--model', type=str, default='meta-llama/Llama-2-7b-chat-hf')
     parser.add_argument('--dataset', type=str, default='triviaqa')
     parser.add_argument('--split', type=str, default='validation')
@@ -31,8 +29,8 @@ if __name__ == '__main__':
     parser.add_argument("--temperature", type=float, default=0.6)
     parser.add_argument("--top_p", type=float, default=0.9)
     parser.add_argument("--num_return_sequences", type=int, default=10)
-    parser.add_argument("--max_length", type=int, default=256)
-    parser.add_argument('--device', type=int, default=0)
+    parser.add_argument("--max_length", type=int, default=512)
+    parser.add_argument('--device', type=int, default=7)
     args = parser.parse_args()
 
     print("----------------------------------")
@@ -64,27 +62,28 @@ if __name__ == '__main__':
         dataset = Meadow.get_dataset()
     else:
         raise ValueError(f"Dataset {args.dataset} not supported")
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=False)
-    model = args.model.split('/')[-1]
-    # collect generation
-    results = []
-    for idx, batch in tqdm(enumerate(dataloader), total=len(dataloader)):
-        if args.dataset == 'meadow' and idx > 1000:
-            break
-        result = {}
-        prompts = batch['prompt']
-        generated = pipe.generate(prompts, max_length=2048, do_sample=False, return_full_text=False)[0]
-        generations = [text_processing.clean_generation(element['generated_text']) for element in generated]
-        references = [text for text in batch['answers']]
-        result['id'] = idx
-        result['prompt'] = prompts
-        result['references'] = references
-        result['greedy'] = generations
+    
+    def collate_fn(data):
+        prompts = [example['prompt'] for example in data]
+        answers = [example['answers'] for example in data]
+        return prompts, answers
 
-        generateds = pipe.generate(prompts, max_length=2048, num_return_sequences=10, temperature=1.0, do_sample=True, top_p=0.9, return_full_text=False)
-        generations = [text_processing.clean_generation(element['generated_text']) for element in generateds[0]]
-        result['sampled'] = generations
-        results.append(result)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=False, collate_fn=collate_fn)
+    model = args.model.split('/')[-1]
+    results = []
+    for idx, (prompts, answers) in tqdm(enumerate(dataloader), total=len(dataloader)):
+        generateds, transition_scores = pipe.generate(
+                                    prompts, max_length=args.max_length, 
+                                    num_return_sequences=args.num_return_sequences, 
+                                    temperature=args.temperature, top_p=args.top_p, 
+                                    do_sample=True,
+                                    return_dict_in_generate=True, output_scores=True,
+                                    repetition_penalty=5.0)
+        generateds = [text_processing.clean_generation(generated.split('A: ')[-1]) for generated in generateds]
+        tmp = [{'prompt':prompt, 'references':answer, 'generated':generated, 'transition_score': transition_score.detach().cpu().numpy().tolist()} 
+               for prompt, answer, generated, transition_score in zip(prompts, answers, generateds, transition_scores)]
+        
+        results.extend(tmp)
 
         if idx % 10 == 0:
             # generate pandas dataframe from results

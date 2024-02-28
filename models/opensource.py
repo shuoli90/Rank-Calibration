@@ -1,4 +1,5 @@
 import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM
 from transformers import pipeline
 import functools
 import numpy as np
@@ -8,38 +9,22 @@ from sklearn.metrics.pairwise import cosine_similarity
 class TextGenerationModel:
     
     def __init__(self, model_name='meta-llama/Llama-2-7b-hf', device=7,**kwargs):
-        self.pipe = pipeline(model=model_name, device=device, use_fast=True, **kwargs)
-        if self.pipe.tokenizer.pad_token is None:
-            self.pipe.tokenizer.pad_token = self.pipe.tokenizer.eos_token
+        self.model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.device = device
+        self.model.generation_config.pad_token_id = self.model.generation_config.eos_token_id
+        self.tokenizer.pad_token = self.tokenizer.eos_token
+        kwargs = {**dict(model=model_name, device=device, use_fast=True), **kwargs}
     
     @torch.no_grad()
     def generate(self, prompts, **kwargs):
-        return self.pipe(prompts, **kwargs)
-    
-    @functools.cached_property
-    def model(self):
-        return self.pipe.model
-    
-    @functools.cached_property
-    def tokenizer(self):
-        return self.pipe.tokenizer
-    
-    @classmethod
-    def clean_generation(cls, sequence):
-        '''
-        Input:
-            sequence: s
-        Output:
-            cleaned sequence: s
-        '''
-        strings_to_filter_on = [
-                    '.', '\n', 'Q:', 'A:', 'question:', 'answer:', 'Question:', 'Answer:', 'Questions:', 'questions:', 'QUESTION:',
-                    'ANSWER:'
-                ]
-        for string in strings_to_filter_on:
-            if string in sequence:
-                sequence = sequence.split(string)[0]
-        return sequence.strip()
+        prompts = self.tokenizer(prompts, return_tensors='pt', padding=True, truncation=True).to(self.device)
+        outputs = self.model.generate(**prompts, **kwargs)
+        transition_scores = self.model.compute_transition_scores(
+            outputs.sequences,
+            outputs.scores,
+            normalize_logits=True)
+        return self.tokenizer.batch_decode(outputs.sequences, skip_special_tokens=True), transition_scores
 
 class NLIModel:
     

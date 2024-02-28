@@ -30,7 +30,7 @@ if __name__ == '__main__':
     
     for file_name in file_names:
         print(f'Loading {file_name}')
-        model, dataset, method = file_name.split('_')[1:4]
+        model, dataset, affinity_mode, method = file_name.split('_')[1:5]
         method = method.split('.')[0]
         print('loading', os.path.join(args.root_dir, file_name))
         data = json.load(open(os.path.join(args.root_dir, file_name)))
@@ -70,7 +70,7 @@ if __name__ == '__main__':
         df = pd.DataFrame(results).dropna(axis=0)
 
         try: 
-            path = os.path.join(args.root_dir, f"{model}_{dataset}_blackbox_{args.correctness}")
+            path = os.path.join(args.root_dir, f"{model}_{dataset}_{affinity_mode}_blackbox_{args.correctness}")
             os.makedirs(path, exist_ok = True) 
         except OSError as error: 
             print("Directory '%s' can not be created" % path) 
@@ -83,7 +83,7 @@ if __name__ == '__main__':
             ax = make_plots.AUROC_vs_Correctness(correctness_score, confidence, thresholds, ax=ax, label=indicator)
         ax.set_title(f'AUROC vs Correctness Threshold {model} {dataset} {method} {args.correctness}')
         ax.grid()
-        ax.figure.savefig(f'{path}/auroc_vs_correctness_{model}_{dataset}_{method}_{args.correctness}.png')
+        ax.figure.savefig(f'{path}/auroc_vs_correctness_{model}_{dataset}_{affinity_mode}_{method}_{args.correctness}.png')
 
         for indicator in indicators:
             fig, ax = plt.subplots()
@@ -94,7 +94,7 @@ if __name__ == '__main__':
             ax.set_xlabel('Correctness score')
             ax.set_ylabel(f'{indicator}')
             plt.grid()
-            plt.savefig(f'{path}/erce_scatter_{model}_{dataset}_{indicator}_{args.correctness}.png')
+            plt.savefig(f'{path}/erce_scatter_{model}_{dataset}_{affinity_mode}_{indicator}_{args.correctness}.png')
 
         fig, ax = plt.subplots()
         ax.violinplot(df[indicators],
@@ -103,7 +103,7 @@ if __name__ == '__main__':
         ax.set_title('Uncertainty value distribution')
         ax.set_xticks([y+1 for y in range(len(indicators))], labels=indicators)
         plt.grid()
-        plt.savefig(f'{path}/confidence_histogram_{model}_{dataset}_{method}_{args.correctness}.png')
+        plt.savefig(f'{path}/confidence_histogram_{model}_{dataset}_{affinity_mode}_{method}_{args.correctness}.png')
 
         correctness_score = df['score'].to_numpy()
         # plot the histogram of correctness score
@@ -113,19 +113,19 @@ if __name__ == '__main__':
         ax.set_xlabel('Correctness score')
         ax.set_ylabel('Frequency')
         plt.grid()
-        plt.savefig(f'{path}/correctness_histogram_{model}_{dataset}_{method}_{args.correctness}.png')
+        plt.savefig(f'{path}/correctness_histogram_{model}_{dataset}_{affinity_mode}_{method}_{args.correctness}.png')
 
         for indicator in indicators:
             fig, ax = plt.subplots()
             uncertainties = df[indicator].to_numpy()
             ax = make_plots.histogram(correctness_score, uncertainties, fig, ax)
-            plt.savefig(f'{path}/erce_{model}_{dataset}_{indicator}_{args.correctness}.png')
+            plt.savefig(f'{path}/erce_{model}_{dataset}_{affinity_mode}_{indicator}_{args.correctness}.png')
 
         for indicator in indicators:
             fig, ax = plt.subplots()
             uncertainties = df[indicator].to_numpy()
             ax = make_plots.histogram_alternative(correctness_score, uncertainties, fig, ax)
-            plt.savefig(f'{path}/erce_alternative{model}_{dataset}_{indicator}_{args.correctness}.png')
+            plt.savefig(f'{path}/erce_alternative{model}_{dataset}_{affinity_mode}_{indicator}_{args.correctness}.png')
 
         fig, ax = plt.subplots()
         ax.violinplot(df[indicators],
@@ -134,7 +134,7 @@ if __name__ == '__main__':
         ax.set_title('Uncertainty value distribution')
         ax.set_xticks([y+1 for y in range(len(indicators))], labels=indicators)
         plt.grid()
-        plt.savefig(f'{path}/confidence_histogram_{model}_{dataset}_{method}_{args.correctness}.png')
+        plt.savefig(f'{path}/confidence_histogram_{model}_{dataset}_{affinity_mode}_{method}_{args.correctness}.png')
         
         if 'entropy' in indicators:
             fig, ax = plt.subplots()
@@ -150,7 +150,7 @@ if __name__ == '__main__':
             ax.set_title('ROC curve')
             ax.legend()
             ax.grid()
-            plt.savefig(f'{path}/roc_curve_{model}_{dataset}_{method}_{args.correctness}_entropy.png')
+            plt.savefig(f'{path}/roc_curve_{model}_{dataset}_{affinity_mode}_{method}_{args.correctness}_entropy.png')
         
         if 'degree' in indicators:
             fig, ax = plt.subplots()
@@ -166,4 +166,4 @@ if __name__ == '__main__':
             ax.set_title('ROC curve')
             ax.legend()
             ax.grid()
-            plt.savefig(f'{path}/roc_curve_{model}_{dataset}_{method}_{args.correctness}_degree.png')
+            plt.savefig(f'{path}/roc_curve_{model}_{dataset}_{affinity_mode}_{method}_{args.correctness}_degree.png')
