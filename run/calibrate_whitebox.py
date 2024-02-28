@@ -1,12 +1,11 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-import torch
+import numpy as np
 import argparse
 from transformers import set_seed
 import logging
 from tqdm import tqdm
-from models import opensource, gpt
 from indicators import whitebox
 import json
 
@@ -35,41 +34,36 @@ if __name__ == '__main__':
 
     model = args.model.split('/')[-1]
     # load collected data
-    if os.path.exists(f'../collected/{model}_{args.dataset}_new.json'):
+    if os.path.exists(f'../collected/{model}_{args.dataset}.json'):
         print("----------------------------------")
         logging.log(logging.INFO, f"Results already saved to ../tmp/calibrate_{model}_{args.dataset}.json")
         print("----------------------------------")
-        data = json.load(open(f'../collected/{model}_{args.dataset}_new.json'))
+        data = json.load(open(f'../collected/{model}_{args.dataset}.json'))
     else:
-        raise ValueError(f"Results not found at ../collected/{model}_{args.dataset}_new.json")
+        raise ValueError(f"Results not found at ../collected/{model}_{args.dataset}.json")
 
-    if 'gpt' in args.model:
-        pipe = gpt.GPTModel(model_name=args.model)
-    else:
-        pipe = opensource.TextGenerationModel(model_name=args.model, torch_dtype=torch.bfloat16)
-        if pipe.tokenizer.pad_token_id is None:
-            pipe.tokenizer.pad_token = pipe.tokenizer.eos_token
-
-    GenerationProbability = whitebox.GenerationProbability(pipe=pipe)
     SE = whitebox.SemanticEntropy(
-        pipe=pipe, 
         device='cuda')
     
     results = []
     for idx, row in tqdm(enumerate(data), total=len(data)):
-        result = {'idx':idx}
-        prompts = row['prompt']
+        result = {}
+        prompt = row['prompt']
         references = row['references']
-        generations_greedy = row['greedy']
-        generations_sampled = row['sampled']
+        generations = row['generated']
+        transition_score = [np.array(score) for score in row['transition_score']] # log probability of each token
 
-        # log probability
-        probabilities = GenerationProbability.compute_scores(prompts, [generations_greedy])
-        result['normalized_nll'] = probabilities[0]['average_neg_log_likelihoods'].item()
-        result['unnormalized_nll'] = probabilities[0]['neg_log_likelihoods'].item()
+        # negative loglikelihood
+        unnormalized_nll = [-np.sum(lls[np.isfinite(lls)]) for lls in transition_score]
+        normalized_nll = [-np.mean(lls[np.isfinite(lls)]) for lls in transition_score]
+        result['unnormalized_nll'] = unnormalized_nll
+        result['normalized_nll'] = normalized_nll
+
         # semantic entropy
-        entropy = SE.compute_scores(prompts, [generations_sampled], normalize=False)
-        result['entropy'] = entropy[0].item()
+        entropy_unnormalized = SE.compute_scores([prompt], [generations], nlls=[unnormalized_nll])
+        result['entropy_unnormalized'] = entropy_unnormalized[0].item()
+        entropy_normalized = SE.compute_scores([prompt], [generations], nlls=[normalized_nll])
+        result['entropy_normalized'] = entropy_normalized[0].item()
         results.append(result)
 
         if idx % 10 == 0:

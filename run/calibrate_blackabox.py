@@ -52,8 +52,7 @@ if __name__ == '__main__':
         result = {"idx": idx}
         prompts = row['prompt']
         references = row['references']
-        generations_greedy = row['greedy'] 
-        generations_sampled = row['sampled']
+        generations_sampled = row['generated']
 
         # split out the last question
         prompts = ['Question: ' + prompt.split('Question: ')[-1] for prompt in prompts]

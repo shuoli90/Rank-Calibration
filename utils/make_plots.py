@@ -14,7 +14,9 @@ def AUROC_vs_Correctness(correctness, confidence, thresholds, ax, **kwargs):
             auroc = roc_auc_score(y_true, y_score)
             aurocs.append(auroc)
         except ValueError:
-            raise ValueError(f"Threshold {threshold} has no positive samples")
+            print('problematic')
+            breakpoint()
+        #     raise ValueError(f"Threshold {threshold} has no positive samples")
     # plot
     df = pd.DataFrame(dict(AUROC=aurocs, Correctness=thresholds))
     sns.lineplot(x="Correctness", y="AUROC", data=df, ax=ax, **kwargs)

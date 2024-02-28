@@ -29,8 +29,14 @@ if __name__ == '__main__':
         SCORE = correctness.BertSimilarity()
     
     for file_name in file_names:
+        if 'whitebox' not in file_name:
+            continue
         print(f'Loading {file_name}')
-        model, dataset, affinity_mode, method = file_name.split('_')[1:5]
+        if 'blackbox' in file_name:
+            model, dataset, affinity_mode, method = file_name.split('_')[1:5]
+        else:
+            model, dataset, method = file_name.split('_')[1:4]
+            affinity_mode = 'none'
         method = method.split('.')[0]
         print('loading', os.path.join(args.root_dir, file_name))
         data = json.load(open(os.path.join(args.root_dir, file_name)))
@@ -40,9 +46,13 @@ if __name__ == '__main__':
         for collected_row, row in zip(collected, data):
             result = {'model':model, 'dataset':dataset, 'method':method, 
                       'metric':args.correctness, 'mode':args.mode}
-            reference = collected_row['references'][0]
-            generation_greedy = collected_row['greedy']
-            generation_sampled = collected_row['sampled']
+            reference = collected_row['references']
+            generations = collected_row['generated']
+            normalized_nll = row['normalized_nll']
+            unnormalized_nll = row['unnormalized_nll']
+            # select generation with the lowest normalized nll
+            greedy_normalized = generations[np.argmin(normalized_nll)]
+            greedy_unnormalized = generations[np.argmin(unnormalized_nll)]
             if method == 'blackbox':
                 indicators = ['ecc', 'degree', 'spectral']
                 ecc = row['ecc_u']
@@ -52,31 +62,39 @@ if __name__ == '__main__':
                 result['degree'] = degree
                 result['spectral'] = spectral
             elif method == 'whitebox':
-                indicators = ['normalized_nll', 'unnormalized_nll', 'entropy']
+                indicators = ['normalized_nll', 'unnormalized_nll', 'entropy_normalized', 'entropy_unnormalized']
                 normalized_nll = row['normalized_nll']
                 unnormalized_nll = row['unnormalized_nll']
-                semantic_entropy = row['entropy']
-                result['normalized_nll'] = normalized_nll
-                result['unnormalized_nll'] = unnormalized_nll
-                result['entropy'] = semantic_entropy
-            if type(reference) != list:
-                    reference = [reference] 
+                entropy_normalized = row['entropy_normalized']
+                entropy_unnormalized = row['entropy_unnormalized']
+                result['normalizes_nll_all'] = normalized_nll
+                result['unnormalized_nll_all'] = unnormalized_nll
+                result['normalized_nll_greedy'] = np.min(normalized_nll)
+                result['unnormalized_nll_greedy'] = np.min(unnormalized_nll)
+                result['entropy_normalized'] = entropy_normalized
+                result['entropy_unnormalized'] = entropy_unnormalized
             if args.correctness in ['rouge', 'bleu', 'meteor']:
-                s = SCORE(reference, generation_greedy)
+                s_unnormalized = [SCORE(references=[reference], predictions=[generation]) for generation in generations]
+                s_normalized = [SCORE(references=[reference], predictions=[generation]) for generation in generations]
             else:
-                s = SCORE("", reference, generation_greedy)[0]
-            result['score'] = s
+                s_normalized = SCORE(references=reference, predictions=[generations])[0]
+                s_unnormalized = SCORE(references=reference, predictions=[generations])[0]
+            result['normalized_score_all'] = s_normalized
+            result['unnormalized_score_all'] = s_unnormalized
+            result['normalized_score_greedy'] = s_normalized[np.argmin(normalized_nll)]
+            result['unnormalized_score_greedy'] = s_unnormalized[np.argmin(unnormalized_nll)]
             results.append(result)
         df = pd.DataFrame(results).dropna(axis=0)
 
         try: 
-            path = os.path.join(args.root_dir, f"{model}_{dataset}_{affinity_mode}_blackbox_{args.correctness}")
+            path = os.path.join(args.root_dir, f"{model}_{dataset}_{affinity_mode}_{args.method}_{args.correctness}")
             os.makedirs(path, exist_ok = True) 
         except OSError as error: 
             print("Directory '%s' can not be created" % path) 
 
         fig, ax = plt.subplots()
-        correctness_score = df['score'].to_numpy()
+        # correctness_score = df['score'].to_numpy()
+        correctness_score = df['normalized_score'].to_numpy()
         for indicator in indicators:
             confidence = -df[indicator].to_numpy()
             thresholds = np.linspace(np.min(correctness_score)+epsilon, np.max(correctness_score)-epsilon, 10)
@@ -105,7 +123,7 @@ if __name__ == '__main__':
         plt.grid()
         plt.savefig(f'{path}/confidence_histogram_{model}_{dataset}_{affinity_mode}_{method}_{args.correctness}.png')
 
-        correctness_score = df['score'].to_numpy()
+        correctness_score = df['normalized_score'].to_numpy()
         # plot the histogram of correctness score
         fig, ax = plt.subplots()
         ax.hist(correctness_score, bins=20)

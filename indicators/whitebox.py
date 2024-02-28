@@ -83,13 +83,11 @@ class WhiteBox():
 
 class SemanticEntropy(WhiteBox):
 
-    def __init__(self, pipe, device='cuda', similarity_model=None):
+    def __init__(self, device='cuda', similarity_model=None):
         self.device = device if device is not None else torch.device('cpu')
         if not similarity_model:
             self.similarity_model = NLIModel(device=device)
         self.mem = defaultdict(dict)
-        self.model = pipe.model
-        self.tokenizer = pipe.tokenizer
 
     def similarities(self, generations):
         sims = [self.similarity_model.classify(g['question'], g['answers']) for g in generations]
@@ -115,14 +113,10 @@ class SemanticEntropy(WhiteBox):
         return ret
     
     # @functools.cached_property
-    def neg_log_likelihoods(self, messages):
-        return get_neg_loglikelihoods(self.model, self.tokenizer, messages)
-    
-    # @functools.cached_property
     def semantic_ids(self, batch_qa_pairs):
         return torch.tensor([self._create_semantic_sets(s) for s in self.similarities(batch_qa_pairs)]).to(self.device)
     
-    def compute_scores(self, batch_prompt, batch_responses, normalize=False):
+    def compute_scores(self, batch_prompt, batch_responses, nlls=None):
         '''
         Input:
             batch_prompt: a batch of prompt [p^1, ..., p^B]
@@ -131,18 +125,11 @@ class SemanticEntropy(WhiteBox):
             batch_entropy: a batch of semantic entropies [etp^1, ..., etp^B]
         '''
         # https://github.com/lorenzkuhn/semantic_uncertainty
-        messages = [{
-            'prompt': torch.tensor(self.tokenizer.encode(prompt)).to(self.device),
-            'generations': torch.tensor(self.tokenizer(responses, padding='longest')['input_ids']).to(self.device),
-            'id': 0
-        } for prompt, responses in zip(batch_prompt, batch_responses)]
         batch_qa_pairs = [{'question':prompt, 'answers':responses} for prompt,responses in zip(batch_prompt, batch_responses)]
-
-        neg_log_likelihoods = self.neg_log_likelihoods(messages)
         semantic_set_ids = self.semantic_ids(batch_qa_pairs)
 
-        log_likelihoods = -torch.stack([s['average_neg_log_likelihoods'] for s in neg_log_likelihoods]) if normalize else -torch.stack([s['neg_log_likelihoods'] for s in neg_log_likelihoods])
-        log_likelihoods = log_likelihoods.to(self.device)
+        # log_likelihoods = -torch.stack([s['average_neg_log_likelihoods'] for s in neg_log_likelihoods]) if normalize else -torch.stack([s['neg_log_likelihoods'] for s in neg_log_likelihoods])
+        log_likelihoods = -torch.tensor(nlls).to(self.device)
         num_samples = log_likelihoods.shape[0]
         batch_entropy = []
         for num_sample in range(num_samples):
