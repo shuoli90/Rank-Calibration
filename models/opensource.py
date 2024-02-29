@@ -9,7 +9,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 class TextGenerationModel:
     
     def __init__(self, model_name='meta-llama/Llama-2-7b-hf', device=7,**kwargs):
-        self.model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
+        self.model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.bfloat16,).to(device)
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.device = device
         self.model.generation_config.pad_token_id = self.model.generation_config.eos_token_id

@@ -12,15 +12,10 @@ import json
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', type=str, default='meta-llama/Llama-2-7b-chat-hf')
-    # parser.add_argument('--model', type=str, default='facebook/opt-350m')
     parser.add_argument('--dataset', type=str, default='triviaqa')
     parser.add_argument('--split', type=str, default='validation')
-    parser.add_argument('--correctness', type=str, default='rouge')
-    parser.add_argument('--metric_threshold', type=float, default=0.5)
     parser.add_argument('--mode', type=str, default='rouge1')
-    parser.add_argument('--indicator', type=str, default='semantic_entropy')
     parser.add_argument('--seed', type=int, default=42)
-    parser.add_argument('--task', type=str, default='text-generation')
     parser.add_argument("--device", type=int, default=1)
     parser.add_argument('--affinity_mode', type=str, default='disagreement')
     args = parser.parse_args()
@@ -28,7 +23,6 @@ if __name__ == '__main__':
     print("----------------------------------")
     logging.basicConfig(level=logging.INFO)
     logging.log(logging.INFO, f"Running {args.model} on {args.dataset} {args.split} split")
-    logging.log(logging.INFO, f"Using {args.correctness} with threshold {args.metric_threshold} and mode {args.mode}")
     print("----------------------------------")
 
     # set seed

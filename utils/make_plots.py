@@ -22,6 +22,27 @@ def AUROC_vs_Correctness(correctness, confidence, thresholds, ax, **kwargs):
     sns.lineplot(x="Correctness", y="AUROC", data=df, ax=ax, **kwargs)
     return ax
 
+def AUROC_vs_Correctness_average(correctnesses, confidences, thresholds, ax, **kwargs):
+    # compute AUROC for different correctness thresholds
+    aurocs = []
+    for threshold in thresholds:
+        aurocs_tmp = []
+        for idx in range(correctnesses.shape[1]):
+            correctness = correctnesses[:, idx]
+            confidence = confidences[:, idx]
+            y_true = correctness >= threshold
+            y_score = confidence
+            try:
+                auroc = roc_auc_score(y_true, y_score)
+                aurocs_tmp.append(auroc)
+            except ValueError:
+                raise ValueError(f"Problematic")
+        aurocs.append(np.mean(aurocs_tmp))
+    # plot
+    df = pd.DataFrame(dict(AUROC=aurocs, Correctness=thresholds))
+    sns.lineplot(x="Correctness", y="AUROC", data=df, ax=ax, **kwargs)
+    return ax
+
 def histogram(correctness, uncertainties, fig, ax, num_bins=10, **kwargs):
     n = len(correctness)
     bin_endpoints = [round(ele) for ele in np.linspace(0, n, num_bins+1)]
