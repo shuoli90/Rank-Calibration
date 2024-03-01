@@ -76,8 +76,8 @@ if __name__ == '__main__':
         scores = [score for score in scores]
         with open(f'../tmp/{model}_{args.dataset}_{args.correctness}.json', 'w') as f:
             json.dump(scores, f)
+        exit(0)
     scores = pd.DataFrame(scores).dropna(axis=0)
-    breakpoint()
     
     file_name = "_".join(['calibrate', args.model, args.dataset, args.affinity_mode, args.method]) + '.json'
     file_name = os.path.join(args.root_dir, file_name)
@@ -141,7 +141,7 @@ if __name__ == '__main__':
             ax = make_plots.AUROC_vs_Correctness(correctness_score, confidence, thresholds, ax=ax, label=indicator)
         ax.set_title(f'AUROC vs Correctness Threshold {model} {dataset} {method} {args.correctness}')
         ax.grid()
-        ax.figure.savefig(f'{path}/auroc_vs_correctness_{model}_{dataset}_{affinity_mode}_{method}_{args.correctness}.png')
+        ax.figure.savefig(f'{path}/auroc_vs_correctness_average_{model}_{dataset}_{affinity_mode}_{method}_{args.correctness}.png')
 
     if method == 'whitebox':
         indicators = ['normalized_nll_all', 'unnormalized_nll_all']
