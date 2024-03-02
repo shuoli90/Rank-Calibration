@@ -88,17 +88,17 @@ if __name__ == '__main__':
         if idx % 10 == 0:
             # generate pandas dataframe from results
             df = pd.DataFrame(results)
-            json.dump(results, open(f'../collected/{model}_{args.dataset}.json', 'w'))
+            json.dump(results, open(f'../collected/{model}_{args.dataset}_{args.temperature}.json', 'w'))
 
             print("----------------------------------")
-            logging.log(logging.INFO, f"Results saved to ../collected/{model}_{args.dataset}.json")
+            logging.log(logging.INFO, f"Results saved to ../collected/{model}_{args.dataset}_{args.temperature}.json")
             print("----------------------------------")        
 
     # generate pandas dataframe from results
     df = pd.DataFrame(results)
-    json.dump(results, open(f'../collected/{model}_{args.dataset}.json', 'w'))
+    json.dump(results, open(f'../collected/{model}_{args.dataset}_{args.temperature}.json', 'w'))
 
     print("----------------------------------")
-    logging.log(logging.INFO, f"Results saved to ../collected/{model}_{args.dataset}.json")
+    logging.log(logging.INFO, f"Results saved to ../collected/{model}_{args.dataset}_{args.temperature}.json")
     print("----------------------------------")
 
