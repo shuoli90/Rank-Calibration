@@ -52,12 +52,13 @@ class GPTModel:
                 n=num_return_sequences,
                 max_tokens=max_length,
                 temperature=temperature if do_sample else 0,
+                logprobs=True,
                 # **kwargs # to be refined
             )
             completions.append(response)
         responses_list = []
         for completion in completions:
-            responses = [{'generated_text': choice.message.content.strip()}
+            responses = [{'generated_text': choice.message.content.strip(), 'logprobs': [c.logprob for c in choice.logprobs.content]}
                 for choice
                 in completion.choices]
             responses_list.append(responses)
@@ -65,4 +66,6 @@ class GPTModel:
             for prompt, response in zip(prompts, responses_list):
                 for item in response:
                     item['generated_text'] = f"{prompt} {item['generated_text']}"
-        return [responses]
+        generations = [[response['generated_text'] for response in responses] for responses in responses_list]
+        transition_scores = [[response['logprobs'] for response in responses] for responses in responses_list]
+        return generations, transition_scores

@@ -67,8 +67,6 @@ if __name__ == '__main__':
     model = args.model.split('/')[-1]
     results = []
     for idx, (prompts, answers) in tqdm(enumerate(dataloader), total=len(dataloader)):
-        if args.dataset == 'meadow' and idx > 1000:
-            break
         generateds, transition_scores = pipe.generate(
                                     prompts, max_length=args.max_length, 
                                     num_return_sequences=args.num_return_sequences, 
@@ -76,12 +74,19 @@ if __name__ == '__main__':
                                     do_sample=True,
                                     return_dict_in_generate=True, output_scores=True,
                                     repetition_penalty=100.0)
-        if len(prompts) == 1:
-            generateds_list = [generateds]
-            transition_scores = [transition_scores]
-        generateds = [[text_processing.clean_generation(generated.split('A: ')[-1]) for generated in generateds] for generateds in generateds_list]
-        tmp = [{'prompt':prompt, 'references':answer, 'generated':generated, 'transition_score': transition_score.detach().cpu().numpy().tolist()} 
-               for prompt, answer, generated, transition_score in zip(prompts, answers, generateds, transition_scores)]
+        if 'gpt' in args.model:
+            tmp = [{'prompt':prompt, 'references':answer, 'generated':generated, 'transition_score': transition_score} 
+                for prompt, answer, generated, transition_score in zip(prompts, answers, generateds, transition_scores)]
+        else:
+            if len(prompts) == 1:
+                generateds_list = [generateds]
+                transition_scores = [transition_scores]
+            if args.dataset == 'meadow':
+                generateds = [generated.split('Title: ')[-1].split('Abstract: ')[0] for generated in generateds]
+            else:
+                generateds = [[text_processing.clean_generation(generated.split('A: ')[-1]) for generated in generateds] for generateds in generateds_list]
+            tmp = [{'prompt':prompt, 'references':answer, 'generated':generated, 'transition_score': transition_score.detach().cpu().numpy().tolist()} 
+                for prompt, answer, generated, transition_score in zip(prompts, answers, generateds, transition_scores)]
         
         results.extend(tmp)
 
