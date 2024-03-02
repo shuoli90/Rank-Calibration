@@ -14,6 +14,7 @@ if __name__ == '__main__':
     parser.add_argument('--model', type=str, default='meta-llama/Llama-2-7b-chat-hf')
     parser.add_argument('--dataset', type=str, default='triviaqa')
     parser.add_argument('--split', type=str, default='validation')
+    parser.add_argument('--device', type=int, default=7)
     parser.add_argument('--seed', type=int, default=42)
     args = parser.parse_args()
 
@@ -36,7 +37,7 @@ if __name__ == '__main__':
         raise ValueError(f"Results not found at ../collected/{model}_{args.dataset}.json")
 
     SE = whitebox.SemanticEntropy(
-        device='cuda')
+        device=args.device,)
     
     results = []
     for idx, row in tqdm(enumerate(data), total=len(data)):
