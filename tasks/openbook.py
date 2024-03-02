@@ -76,7 +76,7 @@ class SQuAD():
             else:
                 question = example['question']
                 context = example['context']
-                example['prompt'] = "Answer the following question basing on the context: " + question + " Context: " + context + " Answer: "
+                example['prompt'] = "Answer the following question basing on the context. Q:" + question + " Context: " + context + " A: "
                 example['answers'] = example['answers']['text']
                 if tokenizer is not None:
                     inputs = tokenizer(example['prompt'], padding=False, truncation=False)

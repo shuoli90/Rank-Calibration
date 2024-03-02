@@ -16,13 +16,12 @@ class NQ_Open:
             all_answers = example.pop('answer')
             example['answers'] = all_answers
             prompt = f"""
-            Question: when are the fa cup semi finals played. [SEP] Answer: the new Wembley Stadium.[SEP]
-            Question: who was alf married to in home and away [SEP] Answer: Ailsa Stewart.[SEP] 
-            Question: what is the name of the first book in the twilight series [SEP] Answer: Twilight.[SEP] 
-            Question: when is tornado season in the united states [SEP] Answer: March through June.[SEP] 
-            Question: where did the idea of a messiah come from [SEP] Answer: Judaism.[SEP] 
-            Question: {example['question']} [SEP] Answer:
-            """
+            Q: when are the fa cup semi finals played. [SEP] A: the new Wembley Stadium.[SEP]
+            Q: who was alf married to in home and away [SEP] A: Ailsa Stewart.[SEP] 
+            Q: what is the name of the first book in the twilight series [SEP] A: Twilight.[SEP] 
+            Q: when is tornado season in the united states [SEP] A: March through June.[SEP] 
+            Q: where did the idea of a messiah come from [SEP] A: Judaism.[SEP] 
+            Q: {example['question']} [SEP] A:"""
             example['prompt'] = prompt
             inputs = self.tokenizer(example['prompt'], padding=False, truncation=False)
             outputs = self.tokenizer(all_answers[0], padding=False, truncation=False)
@@ -60,7 +59,7 @@ class Truthful():
             else:
                 question = example['question']
                 answers = [example['best_answer']] + example['correct_answers']
-                example['prompt'] = "Answer the following question: " + question + "[SEP]" + " Answer: "
+                example['prompt'] = "Answer the following question. Q:" + question + "[SEP]" + " A: "
                 example['answer'] = answers
                 if tokenizer is not None:
                     inputs = tokenizer(example['prompt'], padding=False, truncation=False)
