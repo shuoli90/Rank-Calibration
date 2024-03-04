@@ -12,6 +12,7 @@ import json
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', type=str, default='meta-llama/Llama-2-7b-chat-hf')
+    parser.add_argument("--temperature", type=float, default=0.6)
     parser.add_argument('--dataset', type=str, default='triviaqa')
     parser.add_argument('--split', type=str, default='validation')
     parser.add_argument('--device', type=int, default=7)
@@ -28,18 +29,19 @@ if __name__ == '__main__':
 
     model = args.model.split('/')[-1]
     # load collected data
-    if os.path.exists(f'../collected/{model}_{args.dataset}.json'):
+    if os.path.exists(f'../collected/{model}_{args.dataset}_{args.temperature}.json'):
         print("----------------------------------")
-        logging.log(logging.INFO, f"Results already saved to ../tmp/calibrate_{model}_{args.dataset}.json")
+        logging.log(logging.INFO, f"Results already saved to ../tmp/calibrate_{model}_{args.dataset}_{args.temperature}.json")
         print("----------------------------------")
-        data = json.load(open(f'../collected/{model}_{args.dataset}.json'))
+        data = json.load(open(f'../collected/{model}_{args.dataset}_{args.temperature}.json'))
     else:
-        raise ValueError(f"Results not found at ../collected/{model}_{args.dataset}.json")
+        raise ValueError(f"Results not found at ../collected/{model}_{args.dataset}_{args.temperature}.json")
 
     SE = whitebox.SemanticEntropy(
         device=args.device,)
     
     results = []
+    sim_mats = []
     for idx, row in tqdm(enumerate(data), total=len(data)):
         result = {}
         prompt = row['prompt']
@@ -54,18 +56,18 @@ if __name__ == '__main__':
         result['normalized_nll'] = normalized_nll
 
         # semantic entropy
-        entropy_unnormalized = SE.compute_scores([prompt], [generations], nlls=[unnormalized_nll])
+        entropy_unnormalized = SE.compute_scores([""], [generations], nlls=[unnormalized_nll])
         result['entropy_unnormalized'] = entropy_unnormalized[0].item()
-        entropy_normalized = SE.compute_scores([prompt], [generations], nlls=[normalized_nll])
+        entropy_normalized = SE.compute_scores([""], [generations], nlls=[normalized_nll])
         result['entropy_normalized'] = entropy_normalized[0].item()
         results.append(result)
 
         if idx % 10 == 0:
-            json.dump(results, open(f'../tmp/calibrate_{model}_{args.dataset}_whitebox.json', 'w'))
+            json.dump(results, open(f'../tmp/calibrate_{model}_{args.dataset}_{args.temperature}_none_whitebox.json', 'w'))
     # generate pandas dataframe from results
-    json.dump(results, open(f'../tmp/calibrate_{model}_{args.dataset}_whitebox.json', 'w'))
+    json.dump(results, open(f'../tmp/calibrate_{model}_{args.dataset}_{args.temperature}_none_whitebox.json', 'w'))
 
     print("----------------------------------")
-    logging.log(logging.INFO, f"Results saved to ../tmp/calibrate_{model}_{args.dataset}_whitebox.csv")
+    logging.log(logging.INFO, f"Results saved to ../tmp/calibrate_{model}_{args.dataset}_{args.temperature}_none_whitebox.csv")
     print("----------------------------------")
 
