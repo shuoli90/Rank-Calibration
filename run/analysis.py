@@ -18,8 +18,9 @@ if __name__ == '__main__':
     parser.add_argument('--root_dir', type=str, default='../tmp')
     parser.add_argument('--correctness', type=str, default='rouge')
     parser.add_argument('--model', type=str, default='meta-llama/Llama-2-7b-chat-hf')
+    parser.add_argument('--temperature', type=float, default=0.6)
     parser.add_argument('--dataset', type=str, default='triviaqa')
-    parser.add_argument('--affinity_mode', type=str, default='none')
+    parser.add_argument('--affinity_mode', type=str, default='disagreement')
     parser.add_argument('--method', type=str, default='whitebox')
     parser.add_argument('--mode', type=str, default='rougeL')
     args = parser.parse_args()
@@ -33,71 +34,94 @@ if __name__ == '__main__':
         SCORE = correctness.Score(metric_name=args.correctness, mode=args.mode)
     elif args.correctness in ['bert_similarity']:
         SCORE = correctness.BertSimilarity()
+    elif args.correctness in ['chatgpt']:
+        SCORE = correctness.ChatgptCorrectness()
+    else:
+        raise ValueError(f"Correctness metric {args.correctness} not found")
 
     model = args.model.split('/')[-1]
+    collected_file = '_'.join([model, args.dataset, str(args.temperature)]) + '.json'
+    collected = json.load(open(os.path.join('../collected', collected_file)))
+
     # compute the correctness score
-    if os.path.exists(f'../tmp/{model}_{args.dataset}_{args.correctness}.json'):
-        scores = json.load(open(f'../tmp/{model}_{args.dataset}_{args.correctness}.json'))
+    if os.path.exists(f'../tmp/{model}_{args.dataset}_{args.temperature}_{args.correctness}.json'):
+        scores = json.load(open(f'../tmp/{model}_{args.dataset}_{args.temperature}_{args.correctness}.json'))
     else:
         from multiprocessing import Manager
-        
-        collected_file = '_'.join([model, args.dataset]) + '.json'
-        collected = json.load(open(os.path.join('../collected', collected_file)))
-
-        def compute_scores(col, base, scores):
-            for idx, collected_row in tqdm(enumerate(col), total=len(col)):
+        if args.correctness in ['rouge', 'bleu', 'meteor']:
+            def compute_scores(col, base, scores):
+                for idx, collected_row in tqdm(enumerate(col), total=len(col)):
+                    score_tmp = {}
+                    reference = collected_row['references']
+                    generations = collected_row['generated']
+                    if args.correctness in ['rouge', 'bleu', 'meteor']:
+                        s_unnormalized = [SCORE(references=[reference], predictions=[generation]) for generation in generations]
+                        s_normalized = [SCORE(references=[reference], predictions=[generation]) for generation in generations]
+                    else:
+                        s_normalized = SCORE(references=reference, predictions=[generations])[0]
+                        s_unnormalized = SCORE(references=reference, predictions=[generations])[0]
+                    score_tmp['id'] = idx + base
+                    score_tmp['normalized_score'] = s_normalized
+                    score_tmp['unnormalized_score'] = s_unnormalized
+                    scores.append(score_tmp)
+            manager = Manager()
+            scores = manager.list()
+            processes = []
+            def split(a, n):
+                k, m = divmod(len(a), n)
+                return [a[i*k+min(i, m):(i+1)*k+min(i+1, m)] for i in range(n)]
+            collecteds = split(collected, 10)
+            start = 0
+            for col in collecteds:
+                p = multiprocessing.Process(target=compute_scores, args=(col, start, scores))
+                start += len(col)
+                processes.append(p)
+                p.start()
+            for process in processes:
+                process.join()
+            scores = [score for score in scores]
+        elif args.correctness in ['chatgpt']:
+            scores = []
+            for idx, collected_row in tqdm(enumerate(collected), total=len(collected)):
+                if idx > 1000:
+                    break
                 score_tmp = {}
-                reference = collected_row['references']
+                question = collected_row['prompt'].split('\n')[-2].strip()
+                reference = collected_row['references'][0]
                 generations = collected_row['generated']
-                if args.correctness in ['rouge', 'bleu', 'meteor']:
-                    s_unnormalized = [SCORE(references=[reference], predictions=[generation]) for generation in generations]
-                    s_normalized = [SCORE(references=[reference], predictions=[generation]) for generation in generations]
-                else:
-                    s_normalized = SCORE(references=reference, predictions=[generations])[0]
-                    s_unnormalized = SCORE(references=reference, predictions=[generations])[0]
-                score_tmp['id'] = idx + base
-                score_tmp['normalized_score'] = s_normalized
-                score_tmp['unnormalized_score'] = s_unnormalized
+                scores_tmp = SCORE(prompt=question, reference=reference, generateds=generations)
+                score_tmp['id'] = idx
+                score_tmp['normalized_score'] = scores_tmp
+                score_tmp['unnormalized_score'] = scores_tmp
                 scores.append(score_tmp)
 
-        manager = Manager()
-        scores = manager.list()
-        processes = []
-        # divide the collected into K chunks
-        K = 10
-        chunk_size = len(collected) // K
-        collecteds = [collected[i*chunk_size:(i+1)*chunk_size] for i in range(K)]
-        for i, col in enumerate(collecteds):
-            p = multiprocessing.Process(target=compute_scores, args=(col, i*chunk_size, scores))
-            processes.append(p)
-            p.start()
-        for process in processes:
-            process.join()
-        scores = [score for score in scores]
-        with open(f'../tmp/{model}_{args.dataset}_{args.correctness}.json', 'w') as f:
+                if idx % 10 == 0:
+                    with open(f'../tmp/{model}_{args.dataset}_{args.temperature}_{args.correctness}.json', 'w') as f:
+                        json.dump(scores, f)
+        with open(f'../tmp/{model}_{args.dataset}_{args.temperature}_{args.correctness}.json', 'w') as f:
             json.dump(scores, f)
         exit(0)
     scores = pd.DataFrame(scores).dropna(axis=0)
+
     
-    file_name = "_".join(['calibrate', args.model, args.dataset, args.affinity_mode, args.method]) + '.json'
+    if args.method == 'whitebox':
+        affinity_mode = 'none'
+    else:
+        affinity_mode = args.affinity_mode
+    file_name = "_".join(['calibrate', model, args.dataset, str(args.temperature), affinity_mode, args.method]) + '.json'
     file_name = os.path.join(args.root_dir, file_name)
 
     model = args.model.split('/')[-1]
     dataset = args.dataset
-    affinity_mode = args.affinity_mode
     method = args.method
 
     print('loading', os.path.join(args.root_dir, file_name))
-    data = json.load(open(os.path.join(args.root_dir, file_name)))
+    data = json.load(open(file_name))
 
     results = [] 
-    for idx, (collected_row, row) in tqdm(enumerate(zip(collected, data)), total=len(data)):
-        if idx > 10:
-            break
+    for idx, row in tqdm(enumerate(data), total=len(data)):
         result = {'model':model, 'dataset':dataset, 'method':method, 
                     'metric':args.correctness, 'mode':args.mode}
-        reference = collected_row['references']
-        generations = collected_row['generated']
         if method == 'blackbox':
             result['ecc_u'] = row['ecc_u']
             result['ecc_c'] = row['ecc_c']
@@ -119,6 +143,11 @@ if __name__ == '__main__':
         score = scores[scores['id'] == idx]
         result['normalized_score_all'] = score.iloc[0]['normalized_score']
         result['unnormalized_score_all'] = score.iloc[0]['unnormalized_score']
+        if method == 'whitebox':
+            normalized_min_index = np.argmin(result['normalized_nll_all'])
+            unnormalized_min_index = np.argmin(result['unnormalized_nll_all'])
+            result['normalized_score_greedy'] = result['normalized_score_all'][normalized_min_index]
+            result['unnormalized_score_greedy'] = result['unnormalized_score_all'][unnormalized_min_index]
         results.append(result)
     df = pd.DataFrame(results).dropna(axis=0)
     scores = pd.DataFrame(scores).dropna(axis=0)
@@ -141,7 +170,7 @@ if __name__ == '__main__':
             ax = make_plots.AUROC_vs_Correctness(correctness_score, confidence, thresholds, ax=ax, label=indicator)
         ax.set_title(f'AUROC vs Correctness Threshold {model} {dataset} {method} {args.correctness}')
         ax.grid()
-        ax.figure.savefig(f'{path}/auroc_vs_correctness_average_{model}_{dataset}_{affinity_mode}_{method}_{args.correctness}.png')
+        ax.figure.savefig(f'{path}/auroc_vs_correctness_{model}_{dataset}_{affinity_mode}_{method}_{args.correctness}.png')
 
     if method == 'whitebox':
         indicators = ['normalized_nll_all', 'unnormalized_nll_all']
@@ -199,23 +228,44 @@ if __name__ == '__main__':
     plt.grid()
     plt.savefig(f'{path}/correctness_histogram_{model}_{dataset}_{affinity_mode}_{method}_{args.correctness}.png')
 
-    for indicator in indicators:
+    if method == 'whitebox':
         fig, ax = plt.subplots()
-        if method == 'whitebox':
-            confidence = -np.stack(df[indicator]).flatten()
-        else:
-            confidence = np.stack(df[indicator]).flatten()
+        confidence = -np.stack(df['unnormalized_nll_all']).flatten()
         ax = make_plots.histogram(correctness_scores, confidence, fig, ax)
-        plt.savefig(f'{path}/erce_{model}_{dataset}_{affinity_mode}_{indicator}_{args.correctness}.png')
+        plt.savefig(f'{path}/erce_{model}_{dataset}_{affinity_mode}_unnormalized_nll_all_{args.correctness}.png')
 
-    for indicator in indicators:
         fig, ax = plt.subplots()
-        if method == 'whitebox':
-            confidence = -np.stack(df[indicator]).flatten()
-        else:
-            confidence = np.stack(df[indicator]).flatten()
-        ax = make_plots.histogram_alternative(correctness_scores, confidence, fig, ax)
-        plt.savefig(f'{path}/erce_alternative{model}_{dataset}_{affinity_mode}_{indicator}_{args.correctness}.png')
+        threshold = 0.5
+        y_true = correctness_scores >= threshold
+        # plot roc curve
+        fpr, tpr, _ = roc_curve(y_true, -confidence)
+        ax.plot(fpr, tpr, label='ROC curve')
+        ax.plot([0, 1], [0, 1], 'k--', label='Random')
+        ax.set_xlabel('False Positive Rate')
+        ax.set_ylabel('True Positive Rate')
+        ax.set_title('ROC curve')
+        ax.legend()
+        ax.grid()
+        plt.savefig(f'{path}/roc_curve_{model}_{dataset}_{affinity_mode}_{method}_{args.correctness}_entropy.png')
+    else:
+        fig, ax = plt.subplots()
+        confidence = np.stack(df['degree_c']).flatten()
+        ax = make_plots.histogram(correctness_scores, confidence, fig, ax)
+        plt.savefig(f'{path}/erce_{model}_{dataset}_{affinity_mode}_ecc_u_{args.correctness}.png')
+
+        fig, ax = plt.subplots()
+        threshold = 0.5
+        y_true = correctness_scores >= threshold
+        # plot roc curve
+        fpr, tpr, _ = roc_curve(y_true, confidence)
+        ax.plot(fpr, tpr, label='ROC curve')
+        ax.plot([0, 1], [0, 1], 'k--', label='Random')
+        ax.set_xlabel('False Positive Rate')
+        ax.set_ylabel('True Positive Rate')
+        ax.set_title('ROC curve')
+        ax.legend()
+        ax.grid()
+        plt.savefig(f'{path}/roc_curve_{model}_{dataset}_{affinity_mode}_{method}_{args.correctness}_degree.png')
 
     fig, ax = plt.subplots()
     ax.violinplot(df[indicators],
@@ -225,35 +275,3 @@ if __name__ == '__main__':
     ax.set_xticks([y+1 for y in range(len(indicators))], labels=indicators)
     plt.grid()
     plt.savefig(f'{path}/confidence_histogram_{model}_{dataset}_{affinity_mode}_{method}_{args.correctness}.png')
-    
-    if 'entropy' in indicators:
-        fig, ax = plt.subplots()
-        threshold = 0.5
-        y_true = correctness_score >= threshold
-        y_score = -df['entropy']
-        # plot roc curve
-        fpr, tpr, _ = roc_curve(y_true, y_score)
-        ax.plot(fpr, tpr, label='ROC curve')
-        ax.plot([0, 1], [0, 1], 'k--', label='Random')
-        ax.set_xlabel('False Positive Rate')
-        ax.set_ylabel('True Positive Rate')
-        ax.set_title('ROC curve')
-        ax.legend()
-        ax.grid()
-        plt.savefig(f'{path}/roc_curve_{model}_{dataset}_{affinity_mode}_{method}_{args.correctness}_entropy.png')
-    
-    if 'degree' in indicators:
-        fig, ax = plt.subplots()
-        threshold = 0.5
-        y_true = correctness_score >= threshold
-        y_score = -df['degree']
-        # plot roc curve
-        fpr, tpr, _ = roc_curve(y_true, y_score)
-        ax.plot(fpr, tpr, label='ROC curve')
-        ax.plot([0, 1], [0, 1], 'k--', label='Random')
-        ax.set_xlabel('False Positive Rate')
-        ax.set_ylabel('True Positive Rate')
-        ax.set_title('ROC curve')
-        ax.legend()
-        ax.grid()
-        plt.savefig(f'{path}/roc_curve_{model}_{dataset}_{affinity_mode}_{method}_{args.correctness}_degree.png')
