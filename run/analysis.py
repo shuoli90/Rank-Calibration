@@ -52,14 +52,15 @@ if __name__ == '__main__':
             def compute_scores(col, base, scores):
                 for idx, collected_row in tqdm(enumerate(col), total=len(col)):
                     score_tmp = {}
+                    prompt = collected_row['prompt'].split('\n')[-2].strip()
                     reference = collected_row['references']
                     generations = collected_row['generated']
                     if args.correctness in ['rouge', 'bleu', 'meteor']:
                         s_unnormalized = [SCORE(references=[reference], predictions=[generation]) for generation in generations]
                         s_normalized = [SCORE(references=[reference], predictions=[generation]) for generation in generations]
                     else:
-                        s_normalized = SCORE(references=reference, predictions=[generations])[0]
-                        s_unnormalized = SCORE(references=reference, predictions=[generations])[0]
+                        s_normalized = SCORE(prompt=prompt, references=reference, predictions=[generations])[0]
+                        s_unnormalized = SCORE(prompt=prompt, references=reference, predictions=[generations])[0]
                     score_tmp['id'] = idx + base
                     score_tmp['normalized_score'] = s_normalized
                     score_tmp['unnormalized_score'] = s_unnormalized
@@ -80,6 +81,22 @@ if __name__ == '__main__':
             for process in processes:
                 process.join()
             scores = [score for score in scores]
+        elif args.correctness in ['bert_similarity']:
+            scores = []
+            for idx, collected_row in tqdm(enumerate(collected), total=len(collected)):
+                score_tmp = {}
+                question = collected_row['prompt'].split('\n')[-2].strip()
+                reference = collected_row['references'][0]
+                generations = collected_row['generated']
+                scores_tmp = SCORE(prompt=question, references=reference, predictions=generations)[0].tolist()
+                score_tmp['id'] = idx
+                score_tmp['normalized_score'] = scores_tmp
+                score_tmp['unnormalized_score'] = scores_tmp
+                scores.append(score_tmp)
+
+                if idx % 10 == 0:
+                    with open(f'../tmp/{model}_{args.dataset}_{args.temperature}_{args.correctness}.json', 'w') as f:
+                        json.dump(scores, f)
         elif args.correctness in ['chatgpt']:
             scores = []
             for idx, collected_row in tqdm(enumerate(collected), total=len(collected)):
@@ -102,7 +119,6 @@ if __name__ == '__main__':
             json.dump(scores, f)
         exit(0)
     scores = pd.DataFrame(scores).dropna(axis=0)
-
     
     if args.method == 'whitebox':
         affinity_mode = 'none'
@@ -116,7 +132,7 @@ if __name__ == '__main__':
     method = args.method
 
     print('loading', os.path.join(args.root_dir, file_name))
-    data = json.load(open(file_name))
+    data = json.load(open(file_name))[:len(scores)]
 
     results = [] 
     for idx, row in tqdm(enumerate(data), total=len(data)):
@@ -184,7 +200,10 @@ if __name__ == '__main__':
             confidence = -np.stack(df[indicator])
         else:
             confidence = np.stack(df[indicator])
-        thresholds = np.linspace(0.0+epsilon, 1.0-epsilon, 10)
+        
+        min_val = np.max(np.min(correctness_scores, axis=0))
+        max_val = np.min(np.max(correctness_scores, axis=0))
+        thresholds = np.linspace(min_val+epsilon, max_val-epsilon, 10)
         ax = make_plots.AUROC_vs_Correctness_average(correctness_scores, confidence, thresholds, ax=ax, label=indicator)
     ax.set_title(f'AUROC vs Correctness Threshold {model} {dataset} {method} {args.correctness}')
     ax.grid()
@@ -230,7 +249,7 @@ if __name__ == '__main__':
 
     if method == 'whitebox':
         fig, ax = plt.subplots()
-        confidence = -np.stack(df['unnormalized_nll_all']).flatten()
+        confidence = -np.stack(df['unnormalized_nll_all']).flatten() if args.correctness != 'bert_similarity' else np.stack(df['unnormalized_nll_all']).flatten()
         ax = make_plots.histogram(correctness_scores, confidence, fig, ax)
         plt.savefig(f'{path}/erce_{model}_{dataset}_{affinity_mode}_unnormalized_nll_all_{args.correctness}.png')
 

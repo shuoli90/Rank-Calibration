@@ -1,4 +1,5 @@
 import evaluate
+import re
 from models import gpt
 from models.opensource import BERTEmbedding
 
@@ -25,16 +26,46 @@ class BertSimilarity():
     def __init__(self, model_name='sentence-transformers/bert-base-nli-mean-tokens'):
         self.model = BERTEmbedding(model_name)
     
-    def __call__(self, prompt, ans_1, ans_2):
-        score = self.model.compare(prompt, ans_1, ans_2)
+    def __call__(self, prompt, references, predictions):
+        score = self.model.compare(prompt, references, predictions)
         return score
 
-class ChatgptSimilarity():
+def extract_numbers(string):
+    # Regular expression pattern to match numbers from 0 to 100
+    pattern = r'\b(0|[1-9][0-9]?|100)\b'
+    
+    # Find all matches of the pattern in the string
+    matches = re.findall(pattern, string)
+    
+    # Convert matched strings to integers
+    numbers = [int(match) for match in matches]
+    try:
+        num = numbers[0]
+        return num
+    except:
+        return 0.0
+
+class ChatgptCorrectness():
     def __init__(self):
         self.model = gpt.GPTModel()
     
-    def __call__(self, prompt, ans_1, ans_2):
-        prompt = f"Return a number between 0 and 1 that evaluates the semantic similarity level between the following sentences given the prompt. prompt: {prompt} \n sentence 1: {ans_1} \n sentence 2: {ans_2}"
-        scores = self.model.generate(prompt)
-        scores = [float(score['generated_text']) for score in scores]
-        return scores
+    def __call__(self, prompt, reference, generateds):
+        scores_ret = []
+        for generated in generateds:
+            prompt = f"""Rate the level of consistency between the answer to the question and the reference answer, from 0 to 100.
+    Question: In Scotland a bothy/bothie is a?
+    Reference: House
+    Answer: House
+    Rating: 100.
+    Question: Where in England was Dame Judi Dench born?
+    Reference: York
+    Answer: London
+    Rating: 0.
+    Question: {prompt}
+    Reference: {reference}
+    Answer: {generated}
+    Rating:"""
+            score = self.model.generate(prompt)[0][0]
+            num = float(extract_numbers(score[0]))
+            scores_ret.append(num)
+        return scores_ret
