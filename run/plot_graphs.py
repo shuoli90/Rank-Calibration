@@ -245,7 +245,7 @@ if __name__ == '__main__':
     correctness_scores = np.stack(df['normalized_score_greedy']).flatten()
     for indicator in uncertainty_indicators:
         fig, ax = plt.subplots()
-        uncertainty = df[indicator].to_numpy()
+        uncertainty = -df[indicator].to_numpy()
         ax = make_plots.histogram_alternative(correctness=correctness_scores, uncertainties=uncertainty, ax=ax, num_bins=50)
         ax.set_title(f'{indicator} distribution')
         ax.set_xlabel(f'{indicator}')
@@ -266,7 +266,7 @@ if __name__ == '__main__':
     #     plt.grid()
     #     plt.savefig(f'{path}/{indicator}_confidence_histogram_{model}_{dataset}_{args.correctness}.png')
 
-    confidence = df['unnormalized_entropy'].to_numpy()
+    confidence = -df['entropy_unnormalized'].to_numpy()
     correctness_scores = df['normalized_score_greedy'].to_numpy()
     fig, ax = plt.subplots()
     threshold = 0.5
