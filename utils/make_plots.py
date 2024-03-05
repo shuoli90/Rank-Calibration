@@ -4,7 +4,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_auc_score
 
-def AUROC_vs_Correctness(correctness, confidence, thresholds, ax, **kwargs):
+def AUROC_vs_Correctness(correctness, confidence, thresholds, ax, plot=True, **kwargs):
     # compute AUROC for different correctness thresholds
     aurocs = []
     for threshold in thresholds:
@@ -15,14 +15,16 @@ def AUROC_vs_Correctness(correctness, confidence, thresholds, ax, **kwargs):
             aurocs.append(auroc)
         except ValueError:
             print('problematic')
-            breakpoint()
         #     raise ValueError(f"Threshold {threshold} has no positive samples")
     # plot
-    df = pd.DataFrame(dict(AUROC=aurocs, Correctness=thresholds))
-    sns.lineplot(x="Correctness", y="AUROC", data=df, ax=ax, **kwargs)
-    return ax
+    if plot:
+        df = pd.DataFrame(dict(AUROC=aurocs, Correctness=thresholds))
+        sns.lineplot(x="Correctness", y="AUROC", data=df, ax=ax, **kwargs)
+        return ax
+    else:
+        return aurocs
 
-def AUROC_vs_Correctness_average(correctnesses, confidences, thresholds, ax, **kwargs):
+def AUROC_vs_Correctness_average(correctnesses, confidences, thresholds, ax, plot=True, **kwargs):
     # compute AUROC for different correctness thresholds
     aurocs = []
     for threshold in thresholds:
@@ -39,9 +41,12 @@ def AUROC_vs_Correctness_average(correctnesses, confidences, thresholds, ax, **k
                 raise ValueError(f"Problematic")
         aurocs.append(np.mean(aurocs_tmp))
     # plot
-    df = pd.DataFrame(dict(AUROC=aurocs, Correctness=thresholds))
-    sns.lineplot(x="Correctness", y="AUROC", data=df, ax=ax, **kwargs)
-    return ax
+    if plot:
+        df = pd.DataFrame(dict(AUROC=aurocs, Correctness=thresholds))
+        sns.lineplot(x="Correctness", y="AUROC", data=df, ax=ax, **kwargs)
+        return ax
+    else:
+        return aurocs
 
 def histogram(correctness, uncertainties, fig, ax, num_bins=10, **kwargs):
     n = len(correctness)
@@ -83,7 +88,7 @@ def histogram(correctness, uncertainties, fig, ax, num_bins=10, **kwargs):
     fig.tight_layout()
     return ax
 
-def histogram_alternative(correctness, uncertainties, fig, ax, num_bins=10, **kwargs):
+def histogram_alternative(correctness, uncertainties, ax, num_bins=10, plot=True, **kwargs):
     n = len(correctness)
     bin_endpoints = [round(ele) for ele in np.linspace(0, n, num_bins+1)]
     sorted_indices = np.argsort(uncertainties)
@@ -110,15 +115,21 @@ def histogram_alternative(correctness, uncertainties, fig, ax, num_bins=10, **kw
     count_uncertainties = []
     for a_hat, u_hat in zip(a_hats, u_hats):
         count_correct = (np.sum(a_map >= a_hat) - (1+np.sum(a_map == a_hat)) / 2) / (n-1)
-        # count_uncertainty = (np.sum(u_map >= u_hat) - (1+np.sum(u_map == u_hat)) / 2) / (n-1)
         count_uncertainty = (np.sum(u_map <= u_hat) - (1+np.sum(u_map == u_hat)) / 2) / (n-1)
-        # count_correct = (np.sum(a_map > a_hat) ) / (n-1)
-        # count_uncertainty = (np.sum(u_map > u_hat) ) / (n-1)
         count_corrects.append(count_correct)
         count_uncertainties.append(count_uncertainty)
-    sns.barplot(x=[round(count_uncertainty, 2) for count_uncertainty in count_uncertainties], y=count_corrects, ax=ax, **kwargs)
-    ax.set_xlabel('Certainty')
-    ax.set_ylabel('Correctness')
-    ax.grid()
-    fig.tight_layout()
-    return ax
+    
+    count_corrects = np.array(count_corrects)
+    count_uncertainties = np.array(count_uncertainties)
+
+    if plot:
+        sns.barplot(x=[round(count_uncertainty, 2) for count_uncertainty in count_uncertainties], y=count_corrects, ax=ax, **kwargs)
+        ax.set_xlabel('Certainty')
+        ax.set_ylabel('Correctness')
+        ax.grid()
+        return ax
+    else:
+        abs = np.abs(count_corrects - count_uncertainties)
+        weights = [len(a_map[a_map == a_hat]) for a_hat in a_hats]
+        weights /= np.sum(weights)
+        return np.sum(abs * weights)
