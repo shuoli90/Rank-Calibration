@@ -6,7 +6,7 @@ from sklearn.metrics import roc_auc_score
 from metrics.calibration import reflected_Gaussian_kernel, regressed_correctness_vs_uncertainty_cdf
 import matplotlib.ticker as mtick
 
-def AUROC_vs_Correctness(correctness, confidence, thresholds, ax, **kwargs):
+def AUROC_vs_Correctness(correctness, confidence, thresholds, ax, plot=True, **kwargs):
     # compute AUROC for different correctness thresholds
     aurocs = []
     for threshold in thresholds:
@@ -17,14 +17,16 @@ def AUROC_vs_Correctness(correctness, confidence, thresholds, ax, **kwargs):
             aurocs.append(auroc)
         except ValueError:
             print('problematic')
-            breakpoint()
         #     raise ValueError(f"Threshold {threshold} has no positive samples")
     # plot
-    df = pd.DataFrame(dict(AUROC=aurocs, Correctness=thresholds))
-    sns.lineplot(x="Correctness", y="AUROC", data=df, ax=ax, **kwargs)
-    return ax
+    if plot:
+        df = pd.DataFrame(dict(AUROC=aurocs, Correctness=thresholds))
+        sns.lineplot(x="Correctness", y="AUROC", data=df, ax=ax, **kwargs)
+        return ax
+    else:
+        return aurocs
 
-def AUROC_vs_Correctness_average(correctnesses, confidences, thresholds, ax, **kwargs):
+def AUROC_vs_Correctness_average(correctnesses, confidences, thresholds, ax, plot=True, **kwargs):
     # compute AUROC for different correctness thresholds
     aurocs = []
     for threshold in thresholds:
@@ -41,9 +43,12 @@ def AUROC_vs_Correctness_average(correctnesses, confidences, thresholds, ax, **k
                 raise ValueError(f"Problematic")
         aurocs.append(np.mean(aurocs_tmp))
     # plot
-    df = pd.DataFrame(dict(AUROC=aurocs, Correctness=thresholds))
-    sns.lineplot(x="Correctness", y="AUROC", data=df, ax=ax, **kwargs)
-    return ax
+    if plot:
+        df = pd.DataFrame(dict(AUROC=aurocs, Correctness=thresholds))
+        sns.lineplot(x="Correctness", y="AUROC", data=df, ax=ax, **kwargs)
+        return ax
+    else:
+        return aurocs
 
 def indication_diagram(correctness, uncertainties, fig, ax, num_bins=20, use_kernel = False, sigma=0.1, **kwargs):
     '''
@@ -81,7 +86,6 @@ def indication_diagram(correctness, uncertainties, fig, ax, num_bins=20, use_ker
         ax.grid()
         fig.tight_layout()
         return ax
-
 
 # def histogram(correctness, uncertainties, fig, ax, num_bins=10, **kwargs):
 #     n = len(correctness)
