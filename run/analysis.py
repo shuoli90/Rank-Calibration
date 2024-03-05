@@ -249,8 +249,8 @@ if __name__ == '__main__':
 
     if method == 'whitebox':
         fig, ax = plt.subplots()
-        confidence = -np.stack(df['unnormalized_nll_all']).flatten() if args.correctness != 'bert_similarity' else np.stack(df['unnormalized_nll_all']).flatten()
-        ax = make_plots.histogram(correctness_scores, confidence, fig, ax)
+        confidence = np.stack(df['unnormalized_nll_all']).flatten() if args.correctness != 'bert_similarity' else np.stack(df['unnormalized_nll_all']).flatten()
+        ax = make_plots.indication_diagram(correctness_scores, confidence, fig, ax)
         plt.savefig(f'{path}/erce_{model}_{dataset}_{affinity_mode}_unnormalized_nll_all_{args.correctness}.png')
 
         fig, ax = plt.subplots()
@@ -269,7 +269,7 @@ if __name__ == '__main__':
     else:
         fig, ax = plt.subplots()
         confidence = np.stack(df['degree_c']).flatten()
-        ax = make_plots.histogram(correctness_scores, confidence, fig, ax)
+        ax = make_plots.indication_diagram(correctness_scores, confidence, fig, ax)
         plt.savefig(f'{path}/erce_{model}_{dataset}_{affinity_mode}_ecc_u_{args.correctness}.png')
 
         fig, ax = plt.subplots()
