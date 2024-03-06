@@ -240,45 +240,16 @@ if __name__ == '__main__':
     ax.set_xlabel('Correctness score')
     ax.set_ylabel('Frequency')
     plt.grid()
-<<<<<<< HEAD
-    plt.savefig(f'{path}/correctness_histogram_{model}_{dataset}_{affinity_mode}_{method}_{args.correctness}.png')
-
-    if method == 'whitebox':
-        fig, ax = plt.subplots()
-        confidence = np.stack(df['unnormalized_nll_all']).flatten() if args.correctness != 'bert_similarity' else np.stack(df['unnormalized_nll_all']).flatten()
-        ax = make_plots.indication_diagram(correctness_scores, confidence, fig, ax)
-        plt.savefig(f'{path}/erce_{model}_{dataset}_{affinity_mode}_unnormalized_nll_all_{args.correctness}.png')
-
-        fig, ax = plt.subplots()
-        threshold = 0.5
-        y_true = correctness_scores >= threshold
-        # plot roc curve
-        fpr, tpr, _ = roc_curve(y_true, -confidence)
-        ax.plot(fpr, tpr, label='ROC curve')
-        ax.plot([0, 1], [0, 1], 'k--', label='Random')
-        ax.set_xlabel('False Positive Rate')
-        ax.set_ylabel('True Positive Rate')
-        ax.set_title('ROC curve')
-        ax.legend()
-        ax.grid()
-        plt.savefig(f'{path}/roc_curve_{model}_{dataset}_{affinity_mode}_{method}_{args.correctness}_entropy.png')
-    else:
-        fig, ax = plt.subplots()
-        confidence = np.stack(df['degree_c']).flatten()
-        ax = make_plots.indication_diagram(correctness_scores, confidence, fig, ax)
-        plt.savefig(f'{path}/erce_{model}_{dataset}_{affinity_mode}_ecc_u_{args.correctness}.png')
-=======
     plt.savefig(f'{path}/correctness_histogram_{model}_{dataset}_{args.correctness}.png')
->>>>>>> 848f57e95be6b6474e2eb989f7d025b7e737de36
 
     correctness_scores = np.stack(df['normalized_score_greedy']).flatten()
     for indicator in uncertainty_indicators:
         fig, ax = plt.subplots()
         uncertainty = df[indicator].to_numpy()
-        ax = make_plots.histogram_alternative(correctness=correctness_scores, uncertainties=uncertainty, ax=ax, num_bins=50)
+        ax = make_plots.indication_diagram(correctness=correctness_scores, uncertainties=uncertainty, fig=fig, ax=ax, num_bins=20)
         ax.set_title(f'{indicator} distribution')
-        ax.set_xlabel(f'{indicator}')
-        ax.set_ylabel('Frequency')
+        ax.set_xlabel(f'Percentage of {indicator} (%)', fontsize=15)
+        ax.set_ylabel('Percentage of Regressed Correctness (%)', fontsize=15)
         plt.grid()
         plt.xticks(rotation=45)
         plt.tight_layout()
@@ -288,7 +259,7 @@ if __name__ == '__main__':
     # for indicator in confidence_indicators:
     #     fig, ax = plt.subplots()
     #     confidence = -np.stack(df[indicator]) if 'agreement' in indicator else np.stack(df[indicator])
-    #     ax = make_plots.histogram_alternative(correctness=correctness_scores, uncertainties=confidence, ax=ax, num_bins=50)
+    #     ax = make_plots.indication_diagram(correctness=correctness_scores, uncertainties=confidence, ax=ax, num_bins=50)
     #     ax.set_title(f'{indicator} distribution')
     #     ax.set_xlabel(f'{indicator}')
     #     ax.set_ylabel('Frequency')
