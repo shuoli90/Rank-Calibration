@@ -73,16 +73,26 @@ def indication_diagram(correctness, uncertainties, fig, ax, num_bins=20, use_ker
                 u_hat = np.mean(uncertainty_cdfs[lo:hi])
                 a_hats.append(a_hat)
                 u_hats.append(u_hat)
-        sns.barplot(x=[round(u_hat*100) for u_hat in u_hats], y=[a_hat*100 for a_hat in a_hats], ax=ax, **kwargs)
-        ax.set_xlabel('Percentage of Unertainty (%)')
-        ax.set_ylabel('Percentage of Regressed Correctness (%)')
+        # sns.barplot(x=[round(u_hat*100) for u_hat in u_hats], y=[a_hat*100 for a_hat in a_hats], ax=ax, **kwargs)
+        ucc, acc, B = np.array(u_hats), np.array(a_hats), num_bins
+        ax.bar(np.arange(B)/B*100, np.minimum(1-ucc, acc)*100, width=100/B, color='crimson', align='edge', label='CDF($\mathbb{E}[A|U]$)')
+        ax.bar(np.arange(B)/B*100, (1-ucc-np.minimum(1-ucc, acc))*100, width=100/B, bottom=np.minimum(1-ucc, acc)*100, color='dodgerblue', align='edge', label='CDF($U$)')
+        ax.bar(np.arange(B)/B*100, (acc-np.minimum(1-ucc, acc))*100, width=100/B, bottom=np.minimum(1-ucc, acc)*100, color='salmon', align='edge')
+        # Plot the anti-diagonal line
+        ax.plot([100, 0], [0, 100], linestyle='--', color='black', linewidth=2)
+        # Add legend
+        ax.legend(loc='upper right', frameon=False, fontsize=15)
+
+        ax.set_xlabel('Percentage of Unertainty (%)', fontsize=15)
+        ax.set_ylabel('Percentage of Regressed Correctness (%)', fontsize=15)
+        plt.xlim(0, 100)
         ax.grid()
         fig.tight_layout()
         return ax
     else:
         plt.plot(uncertainty_cdfs*100, regressed_correctness_cdfs*100, color='r', linewidth=2)
-        ax.set_xlabel('Percentage of Unertainty (%)')
-        ax.set_ylabel('Percentage of Regressed Correctness (%)')
+        ax.set_xlabel('Percentage of Unertainty (%)', fontsize=15)
+        ax.set_ylabel('Percentage of Regressed Correctness (%)', fontsize=15)
         ax.grid()
         fig.tight_layout()
         return ax
