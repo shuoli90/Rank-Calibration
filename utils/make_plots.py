@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import roc_auc_score
 from metrics.calibration import reflected_Gaussian_kernel, regressed_correctness_vs_uncertainty_cdf
 import matplotlib.ticker as mtick
+from metrics.calibration import reflected_Gaussian_kernel, regressed_correctness_vs_uncertainty_cdf, AUARC
+import matplotlib.ticker as mtick
 
 def AUROC_vs_Correctness(correctness, confidence, thresholds, ax, plot=True, **kwargs):
     # compute AUROC for different correctness thresholds
@@ -20,8 +22,8 @@ def AUROC_vs_Correctness(correctness, confidence, thresholds, ax, plot=True, **k
         #     raise ValueError(f"Threshold {threshold} has no positive samples")
     # plot
     if plot:
-        df = pd.DataFrame(dict(AUROC=aurocs, Correctness=thresholds))
-        sns.lineplot(x="Correctness", y="AUROC", data=df, ax=ax, **kwargs)
+        df = pd.DataFrame(dict(AUROC=aurocs, Threshold=thresholds))
+        sns.lineplot(x="Threshold", y="AUROC", data=df, ax=ax, **kwargs)
         return ax
     else:
         return aurocs
@@ -44,8 +46,8 @@ def AUROC_vs_Correctness_average(correctnesses, confidences, thresholds, ax, plo
         aurocs.append(np.mean(aurocs_tmp))
     # plot
     if plot:
-        df = pd.DataFrame(dict(AUROC=aurocs, Correctness=thresholds))
-        sns.lineplot(x="Correctness", y="AUROC", data=df, ax=ax, **kwargs)
+        df = pd.DataFrame(dict(AUROC=aurocs, Threshold=thresholds))
+        sns.lineplot(x="Threshold", y="AUROC", data=df, ax=ax, **kwargs)
         return ax
     else:
         return aurocs
