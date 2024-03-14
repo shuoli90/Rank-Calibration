@@ -80,15 +80,20 @@ if __name__ == '__main__':
             tmp['normalized_nll_greedy'] = np.min(row_whitebox['normalized_nll'])
             tmp['unnormalized_nll_greedy'] = np.min(row_whitebox['unnormalized_nll'])
 
+            try:
             # select scores with the same index
-            score = scores[scores['id'] == idx]
-            tmp['normalized_score_all'] = score.iloc[0]['normalized_score']
-            tmp['unnormalized_score_all'] = score.iloc[0]['unnormalized_score']
-            normalized_min_index = np.argmin(tmp['normalized_nll_all'])
-            unnormalized_min_index = np.argmin(tmp['unnormalized_nll_all'])
-            tmp['normalized_score_greedy'] = tmp['normalized_score_all'][normalized_min_index]
-            tmp['unnormalized_score_greedy'] = tmp['unnormalized_score_all'][unnormalized_min_index]
-            tmps.append(tmp)
+                score = scores[scores['id'] == idx]
+                tmp['normalized_score_all'] = score.iloc[0]['normalized_score']
+                tmp['unnormalized_score_all'] = score.iloc[0]['unnormalized_score']
+                normalized_min_index = np.argmin(tmp['normalized_nll_all'])
+                unnormalized_min_index = np.argmin(tmp['unnormalized_nll_all'])
+                tmp['normalized_score_greedy'] = tmp['normalized_score_all'][normalized_min_index]
+                tmp['unnormalized_score_greedy'] = tmp['unnormalized_score_all'][unnormalized_min_index]
+                tmps.append(tmp)
+            except:
+                print(len(score.iloc[0]['normalized_score']))
+                breakpoint()
+
         df = pd.DataFrame(tmps).dropna(axis=0)
         scores = pd.DataFrame(scores).dropna(axis=0)
         # concatenate the scores

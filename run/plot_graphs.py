@@ -79,9 +79,9 @@ if __name__ == '__main__':
             for idx, collected_row in tqdm(enumerate(collected), total=len(collected)):
                 score_tmp = {}
                 # question = collected_row['prompt'].split('\n')[-2].strip()
-                reference = collected_row['references'][0]
+                reference = collected_row['references'] if isinstance(collected_row['references'], list) else [collected_row['references']]
                 generations = collected_row['generated']
-                scores_tmp = SCORE(prompt="", references=reference, predictions=generations)[0].tolist()
+                scores_tmp = SCORE(prompt="", references=reference, predictions=generations).tolist()
                 score_tmp['id'] = idx
                 score_tmp['normalized_score'] = scores_tmp
                 score_tmp['unnormalized_score'] = scores_tmp
