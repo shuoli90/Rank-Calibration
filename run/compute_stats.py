@@ -59,7 +59,7 @@ if __name__ == '__main__':
         result = {'model':model, 'dataset':dataset,
                         'metric':args.correctness, 'mode':args.mode, 'seed':seed, 'temperature':args.temperature}
         tmps = []
-        for idx, (row_whitebox, row_blackbox_disagreement, row_blackbox_agreement) in tqdm(enumerate(zip(data_whitebox_bootstrap, data_blackbox_disagreement_bootstrap, data_blackbox_agreement_bootstrap)), total=len(data_whitebox)):
+        for idx, row_whitebox, row_blackbox_disagreement, row_blackbox_agreement in tqdm(zip(indices, data_whitebox_bootstrap, data_blackbox_disagreement_bootstrap, data_blackbox_agreement_bootstrap), total=len(data_whitebox)):
             tmp = {}
             tmp['ecc_c_disagreement'] = row_blackbox_disagreement['ecc_c']
             tmp['degree_c_disagreement'] = row_blackbox_disagreement['degree_c']
@@ -80,19 +80,15 @@ if __name__ == '__main__':
             tmp['normalized_nll_greedy'] = np.min(row_whitebox['normalized_nll'])
             tmp['unnormalized_nll_greedy'] = np.min(row_whitebox['unnormalized_nll'])
 
-            try:
             # select scores with the same index
-                score = scores[scores['id'] == idx]
-                tmp['normalized_score_all'] = score.iloc[0]['normalized_score']
-                tmp['unnormalized_score_all'] = score.iloc[0]['unnormalized_score']
-                normalized_min_index = np.argmin(tmp['normalized_nll_all'])
-                unnormalized_min_index = np.argmin(tmp['unnormalized_nll_all'])
-                tmp['normalized_score_greedy'] = tmp['normalized_score_all'][normalized_min_index]
-                tmp['unnormalized_score_greedy'] = tmp['unnormalized_score_all'][unnormalized_min_index]
-                tmps.append(tmp)
-            except:
-                print(len(score.iloc[0]['normalized_score']))
-                breakpoint()
+            score = scores[scores['id'] == idx]
+            tmp['normalized_score_all'] = score.iloc[0]['normalized_score']
+            tmp['unnormalized_score_all'] = score.iloc[0]['unnormalized_score']
+            normalized_min_index = np.argmin(tmp['normalized_nll_all'])
+            unnormalized_min_index = np.argmin(tmp['unnormalized_nll_all'])
+            tmp['normalized_score_greedy'] = tmp['normalized_score_all'][normalized_min_index]
+            tmp['unnormalized_score_greedy'] = tmp['unnormalized_score_all'][unnormalized_min_index]
+            tmps.append(tmp)
 
         df = pd.DataFrame(tmps).dropna(axis=0)
         scores = pd.DataFrame(scores).dropna(axis=0)
@@ -105,25 +101,6 @@ if __name__ == '__main__':
         confidence_indicators = ['ecc_c_disagreement', 'degree_c_disagreement', 'ecc_c_agreement', 'degree_c_agreement', 
                                 'normalized_nll_all', 'unnormalized_nll_all']
         indicators = uncertainty_indicators + confidence_indicators
-
-        # uncertainty aurocs 
-        # uncertainty_aurocs = {}
-        # correctness_score = df['normalized_score_greedy'].to_numpy()
-        # for indicator in uncertainty_indicators:
-        #     confidence = -df[indicator].to_numpy()
-        #     thresholds = np.linspace(np.min(correctness_score)+epsilon, np.max(correctness_score)-epsilon, 10)
-        #     aurocs = make_plots.AUROC_vs_Correctness(correctness_score, confidence, thresholds, ax=None, plot=False, label=indicator)
-        #     uncertainty_aurocs[indicator] = aurocs
-
-        # confidence_aurocs = {} 
-        # correctness_scores = np.stack(df['normalized_score_all'])
-        # for indicator in confidence_indicators:
-        #     confidence = np.stack(df[indicator]) if 'agreement' in indicator else -np.stack(df[indicator])
-        #     min_val = np.max(np.min(correctness_scores, axis=0))
-        #     max_val = np.min(np.max(correctness_scores, axis=0))
-        #     thresholds = np.linspace(min_val+epsilon, max_val-epsilon, 10)
-        #     aurocs = make_plots.AUROC_vs_Correctness_average(correctness_scores, confidence, thresholds, ax=None, plot=False, label=indicator)
-        #     uncertainty_aurocs[indicator] = aurocs  
         
         correctness_scores = np.stack(df['normalized_score_greedy']).flatten()
         for indicator in uncertainty_indicators:
@@ -132,13 +109,13 @@ if __name__ == '__main__':
             # uncertainty_erces[indicator] = erce
             result[f'{indicator}_erce'] = erce
         
-        correctness_scores = np.stack(df['normalized_score_all']).flatten()
-        for indicator in confidence_indicators:
-            confidence = -np.stack(df[indicator]).flatten() if 'agreement' in indicator else np.stack(df[indicator]).flatten()
-            erce = calibration.plugin_RCE_est(correctness=correctness_scores, uncertainties=confidence, num_bins=20, p=1)
-            # confidence_erces[indicator] = erce
-            result[f'{indicator}_erce'] = erce
-        
+        # correctness_scores = np.stack(df['normalized_score_all']).flatten()
+        # for indicator in confidence_indicators:
+        #     confidence = -np.stack(df[indicator]).flatten() if 'agreement' in indicator else np.stack(df[indicator]).flatten()
+        #     erce = calibration.plugin_RCE_est(correctness=correctness_scores, uncertainties=confidence, num_bins=20, p=1)
+        #     # confidence_erces[indicator] = erce
+        #     result[f'{indicator}_erce'] = erce
+    
         results.append(result)
     
     # write the results to a file
