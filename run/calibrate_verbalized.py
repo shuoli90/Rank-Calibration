@@ -50,22 +50,23 @@ if __name__ == '__main__':
     for idx, row in tqdm(enumerate(data), total=len(data)):
         if idx < collected_length:
             continue
+        result = {"idx": idx}
+        prompts = row['prompt']
+        references = row['references']
+        generations_sampled = row['generated']
         try:
-            result = {"idx": idx}
-            prompts = row['prompt']
-            references = row['references']
-            generations_sampled = row['generated']
-
-            question = prompts.split('\n')[-2].strip()
+            if args.dataset != 'squad':
+                question = prompts.split('\n')[-2].strip()
+            else:
+                question = prompts
             verbalized_score = verbalized.compute_scores([question], [generations_sampled])
             result['verbalized'] = verbalized_score[0]
-
-            results.append(result)
-            if idx % 10 == 0:
-                json.dump(results, open(f'../tmp/calibrate_{model_name}_{args.dataset}_{args.temperature}_{args.affinity_mode}_verbalized.json', 'w'))
-        except:
-            print(f"Error at idx {idx}")
+        except Exception as e:
             continue
+
+        results.append(result)
+        if idx % 10 == 0:
+            json.dump(results, open(f'../tmp/calibrate_{model_name}_{args.dataset}_{args.temperature}_{args.affinity_mode}_verbalized.json', 'w'))
     
     json.dump(results, open(f'../tmp/calibrate_{model_name}_{args.dataset}_{args.temperature}_{args.affinity_mode}_verbalized.json', 'w'))
 

@@ -114,11 +114,17 @@ if __name__ == '__main__':
     model = args.model.split('/')[-1]
     dataset = args.dataset
     file_names = []
-    for method in ['whitebox', 'blackbox']:
+    for method in ['whitebox', 'blackbox', 'verbalized']:
         if method == 'whitebox':
             affinity_mode = 'none'
             file_name = "_".join(['calibrate', model, dataset, str(args.temperature), affinity_mode, 'whitebox']) + '.json'
             file_names.append(file_name)
+        elif method == 'verbalized':
+            try:
+                file_name = "_".join(['calibrate', model, dataset, str(args.temperature), 'disagreement', 'verbalized']) + '.json'
+                file_names.append(file_name)
+            except:
+                continue
         else:
             for affinity_mode in ['disagreement', 'agreement']:
                 file_name = "_".join(['calibrate', model, dataset, str(args.temperature), affinity_mode, 'blackbox']) + '.json'
@@ -126,58 +132,103 @@ if __name__ == '__main__':
     data_whitebox = json.load(open(os.path.join(args.root_dir, file_names[0])))
     data_blackbox_disagreement = json.load(open(os.path.join(args.root_dir, file_names[1])))
     data_blackbox_agreement = json.load(open(os.path.join(args.root_dir, file_names[2])))
-    results = []
-    for idx, (row_whitebox, row_blackbox_disagreement, row_blackbox_agreement) in tqdm(enumerate(zip(data_whitebox, data_blackbox_disagreement, data_blackbox_agreement)), total=len(data_whitebox)):
-        result = {'model':model, 'dataset':dataset, 'method':method, 
-                    'metric':args.correctness, 'mode':args.mode}
-        
-        # result['ecc_c_disagreement'] = row_blackbox_disagreement['ecc_c']
-        # result['degree_c_disagreement'] = row_blackbox_disagreement['degree_c']
-        # result['ecc_u_disagreement'] = row_blackbox_disagreement['ecc_u']
-        # result['degree_u_disagreement'] = row_blackbox_disagreement['degree_u']
-        # result['spectral_u_disagreement'] = row_blackbox_disagreement['spectral_u']
+    if model == 'gpt-3.5-turbo':
+        data_verbalized = json.load(open(os.path.join(args.root_dir, file_names[3])))
+        results = []
+        for row_verbalized in data_verbalized:
+            result = {'model':model, 'dataset':dataset, 'metric':args.correctness}
+            idx = row_verbalized['idx']
+            row_whitebox = data_whitebox[idx]
+            row_blackbox_disagreement = data_blackbox_disagreement[idx]
+            row_blackbox_agreement = data_blackbox_agreement[idx]
+            
+            # result['ecc_c_disagreement'] = row_blackbox_disagreement['ecc_c']
+            # result['degree_c_disagreement'] = row_blackbox_disagreement['degree_c']
+            # result['ecc_u_disagreement'] = row_blackbox_disagreement['ecc_u']
+            # result['degree_u_disagreement'] = row_blackbox_disagreement['degree_u']
+            # result['spectral_u_disagreement'] = row_blackbox_disagreement['spectral_u']
 
-        result[r'$U_{\rm EigV}$'] = row_blackbox_agreement['spectral_u']
-        result[r'$U_{\rm Ecc}$'] = row_blackbox_agreement['ecc_u']
-        result[r'$U_{\rm Deg}$'] = row_blackbox_agreement['degree_u']
+            result[r'$U_{\rm EigV}$'] = [row_blackbox_agreement['spectral_u']] * 10
+            result[r'$U_{\rm Ecc}$'] = [row_blackbox_agreement['ecc_u']] * 10
+            result[r'$U_{\rm Deg}$'] = [row_blackbox_agreement['degree_u']] * 10
 
-        # result['ecc_c_agreement'] = row_blackbox_agreement['ecc_c']
-        # result['degree_c_agreement'] = row_blackbox_agreement['degree_c']
-        # result['ecc_u_agreement'] = row_blackbox_agreement['ecc_u']
-        # result['degree_u_agreement'] = row_blackbox_agreement['degree_u']
-        # result['spectral_u_agreement'] = row_blackbox_agreement['spectral_u']
+            # result['ecc_c_agreement'] = row_blackbox_agreement['ecc_c']
+            # result['degree_c_agreement'] = row_blackbox_agreement['degree_c']
+            # result['ecc_u_agreement'] = row_blackbox_agreement['ecc_u']
+            # result['degree_u_agreement'] = row_blackbox_agreement['degree_u']
+            # result['spectral_u_agreement'] = row_blackbox_agreement['spectral_u']
 
-        # result['entropy_normalized'] = row_whitebox['entropy_normalized']
-        # result['entropy_unnormalized'] = row_whitebox['entropy_unnormalized']
-        result['normalized_nll_all'] = row_whitebox['normalized_nll']
-        result['unnormalized_nll_all'] = row_whitebox['unnormalized_nll']
-        # result['normalized_nll_greedy'] = np.min(row_whitebox['normalized_nll'])
-        # result['unnormalized_nll_greedy'] = np.min(row_whitebox['unnormalized_nll'])
-        result[r'$U_{\rm SE}$'] = row_whitebox['entropy_unnormalized']
-        unnormalized_min_index = np.argmin(result['unnormalized_nll_all'])
-        result[r'$U_{\rm NLL}$'] =result['unnormalized_nll_all'][unnormalized_min_index]
+            # result['entropy_normalized'] = row_whitebox['entropy_normalized']
+            # result['entropy_unnormalized'] = row_whitebox['entropy_unnormalized']
+            result['normalized_nll_all'] = row_whitebox['normalized_nll']
+            result['unnormalized_nll_all'] = row_whitebox['unnormalized_nll']
+            # result['normalized_nll_greedy'] = np.min(row_whitebox['normalized_nll'])
+            # result['unnormalized_nll_greedy'] = np.min(row_whitebox['unnormalized_nll'])
+            result[r'$U_{\rm SE}$'] = [row_whitebox['entropy_unnormalized']] * 10
+            unnormalized_min_index = np.argmin(result['unnormalized_nll_all'])
+            result[r'$U_{\rm NLL}$'] =result['unnormalized_nll_all']
+            result[r'$C_{\rm Verb}$'] = row_verbalized['verbalized']
 
-        # select scores with the same index
-        score = scores[scores['id'] == idx]
-        result['normalized_score_all'] = score.iloc[0]['normalized_score']
-        result['unnormalized_score_all'] = score.iloc[0]['unnormalized_score']
-        normalized_min_index = np.argmin(result['normalized_nll_all'])
-        unnormalized_min_index = np.argmin(result['unnormalized_nll_all'])
-        result['normalized_score_greedy'] = result['normalized_score_all'][normalized_min_index]
-        result['unnormalized_score_greedy'] = result['unnormalized_score_all'][unnormalized_min_index]
-        results.append(result)
-    df = pd.DataFrame(results).dropna(axis=0)
-    scores = pd.DataFrame(scores).dropna(axis=0)
-    # concatenate the scores
-    df = pd.concat([df, scores], axis=1)
+            # select scores with the same index
+            score = scores[scores['id'] == idx]
+            result['normalized_score_all'] = score.iloc[0]['normalized_score']
+            result['unnormalized_score_all'] = score.iloc[0]['unnormalized_score']
+            normalized_min_index = np.argmin(result['normalized_nll_all'])
+            unnormalized_min_index = np.argmin(result['unnormalized_nll_all'])
+            result['normalized_score_greedy'] = result['normalized_score_all'][normalized_min_index]
+            result['unnormalized_score_greedy'] = result['unnormalized_score_all'][unnormalized_min_index]
+            results.append(result)
+        df = pd.DataFrame(results).dropna(axis=0)
+    else:
+        results = []
+        for idx, (row_whitebox, row_blackbox_disagreement, row_blackbox_agreement) in tqdm(enumerate(zip(data_whitebox, data_blackbox_disagreement, data_blackbox_agreement)), total=len(data_whitebox)):
+            result = {'model':model, 'dataset':dataset, 'metric':args.correctness}
+            
+            # result['ecc_c_disagreement'] = row_blackbox_disagreement['ecc_c']
+            # result['degree_c_disagreement'] = row_blackbox_disagreement['degree_c']
+            # result['ecc_u_disagreement'] = row_blackbox_disagreement['ecc_u']
+            # result['degree_u_disagreement'] = row_blackbox_disagreement['degree_u']
+            # result['spectral_u_disagreement'] = row_blackbox_disagreement['spectral_u']
 
-    # uncertainty_indicators = ['ecc_u_disagreement', 'degree_u_disagreement', 'spectral_u_disagreement',
-    #                           'ecc_u_agreement', 'degree_u_agreement', 'spectral_u_agreement',
-    #                           'normalized_nll_greedy', 'unnormalized_nll_greedy', 'entropy_normalized', 'entropy_unnormalized']
-    # confidence_indicators = ['ecc_c_disagreement', 'degree_c_disagreement', 'ecc_c_agreement', 'degree_c_agreement', 
-    #                          'normalized_nll_all', 'unnormalized_nll_all']
-    uncertainty_indicators = [r'$U_{\rm EigV}$', r'$U_{\rm Ecc}$', r'$U_{\rm Deg}$', r'$U_{\rm SE}$', r'$U_{\rm NLL}$']
-    uncertainty_indicators_print = ['EigV', 'Ecc', 'Deg', 'SE', 'NLL']
+            result[r'$U_{\rm EigV}$'] = [row_blackbox_agreement['spectral_u']] * 10
+            result[r'$U_{\rm Ecc}$'] = [row_blackbox_agreement['ecc_u']] * 10
+            result[r'$U_{\rm Deg}$'] = [row_blackbox_agreement['degree_u']] * 10
+
+            # result['ecc_c_agreement'] = row_blackbox_agreement['ecc_c']
+            # result['degree_c_agreement'] = row_blackbox_agreement['degree_c']
+            # result['ecc_u_agreement'] = row_blackbox_agreement['ecc_u']
+            # result['degree_u_agreement'] = row_blackbox_agreement['degree_u']
+            # result['spectral_u_agreement'] = row_blackbox_agreement['spectral_u']
+
+            # result['entropy_normalized'] = row_whitebox['entropy_normalized']
+            # result['entropy_unnormalized'] = row_whitebox['entropy_unnormalized']
+            result['normalized_nll_all'] = row_whitebox['normalized_nll']
+            result['unnormalized_nll_all'] = row_whitebox['unnormalized_nll']
+            # result['normalized_nll_greedy'] = np.min(row_whitebox['normalized_nll'])
+            # result['unnormalized_nll_greedy'] = np.min(row_whitebox['unnormalized_nll'])
+            result[r'$U_{\rm SE}$'] = [row_whitebox['entropy_unnormalized']] * 10
+            unnormalized_min_index = np.argmin(result['unnormalized_nll_all'])
+            result[r'$U_{\rm NLL}$'] =result['unnormalized_nll_all']
+
+            # select scores with the same index
+            score = scores[scores['id'] == idx]
+            result['normalized_score_all'] = score.iloc[0]['normalized_score']
+            result['unnormalized_score_all'] = score.iloc[0]['unnormalized_score']
+            normalized_min_index = np.argmin(result['normalized_nll_all'])
+            unnormalized_min_index = np.argmin(result['unnormalized_nll_all'])
+            result['normalized_score_greedy'] = result['normalized_score_all'][normalized_min_index]
+            result['unnormalized_score_greedy'] = result['unnormalized_score_all'][unnormalized_min_index]
+            results.append(result)
+        df = pd.DataFrame(results).dropna(axis=0)
+
+
+
+    if model == 'gpt-3.5-turbo':
+        uncertainty_indicators = [r'$U_{\rm EigV}$', r'$U_{\rm Ecc}$', r'$U_{\rm Deg}$', r'$U_{\rm SE}$', r'$U_{\rm NLL}$', r'$C_{\rm Verb}$']
+        uncertainty_indicators_print = ['EigV', 'Ecc', 'Deg', 'SE', 'NLL', 'Verb']
+    else:
+        uncertainty_indicators = [r'$U_{\rm EigV}$', r'$U_{\rm Ecc}$', r'$U_{\rm Deg}$', r'$U_{\rm SE}$', r'$U_{\rm NLL}$']
+        uncertainty_indicators_print = ['EigV', 'Ecc', 'Deg', 'SE', 'NLL']
     # indicators = uncertainty_indicators + confidence_indicators
 
     try: 
@@ -187,101 +238,83 @@ if __name__ == '__main__':
         print("Directory '%s' can not be created" % path) 
 
     # change plot font size
-    plt.rcParams.update({'font.size': 15})
+    plt.rcParams.update({'font.size': 30})
 
-    fig, ax = plt.subplots()
-    # correctness_score = df['score'].to_numpy()
-    correctness_score = df['normalized_score_greedy'].to_numpy()
-    for indicator in uncertainty_indicators:
-        confidence = -df[indicator].to_numpy()
-        thresholds = np.linspace(np.min(correctness_score)+epsilon, np.max(correctness_score)-epsilon, 10)
-        ax = make_plots.AUROC_vs_Correctness(correctness_score, confidence, thresholds, ax=ax, label=indicator)
+    # fig, ax = plt.subplots(figsize=(10, 10))
+    # # correctness_score = df['score'].to_numpy()
+    # correctness_score = df['normalized_score_greedy'].to_numpy()
+    # for indicator in uncertainty_indicators:
+    #     confidence = -df[indicator].to_numpy() if indicator != r'$C_{\rm Verb}$' else df[indicator].to_numpy()
+    #     thresholds = np.linspace(np.min(correctness_score)+epsilon, np.max(correctness_score)-epsilon, 10)
+    #     ax = make_plots.AUROC_vs_Correctness(correctness_score, confidence, thresholds, ax=ax, label=indicator)
     # ax.set_title(f'AUROC vs Correctness Threshold {model} {dataset} {method} {args.correctness}')
+    # ax.grid()
+    # plt.tight_layout()
+    # ax.figure.savefig(f'{path}/auroc.pdf')
+
+    plt.rcParams.update({'font.size': 30})
+
+    correctness_scores = np.stack(df['normalized_score_all'])
+    fig, ax = plt.subplots(figsize=(10, 10))
+    for indicator in uncertainty_indicators:
+        confidence = np.stack(df[indicator]) if 'Verb' in indicator else -np.stack(df[indicator])
+        min_val = np.max(np.min(correctness_scores, axis=0))
+        max_val = np.min(np.max(correctness_scores, axis=0))
+        thresholds = np.linspace(min_val+epsilon, max_val-epsilon, 10)
+        ax = make_plots.AUROC_vs_Correctness_average(correctness_scores, confidence, thresholds, ax=ax, label=indicator)
     ax.grid()
     plt.tight_layout()
-    ax.figure.savefig(f'{path}/auroc_vs_correctness_{model}_{dataset}_{args.correctness}.png')
+    ax.figure.savefig(f'{path}/auroc.pdf')
 
-    # correctness_scores = np.stack(df['normalized_score_all'])
-    # fig, ax = plt.subplots()
-    # for indicator in confidence_indicators:
-    #     confidence = np.stack(df[indicator]) if 'agreement' in indicator else -np.stack(df[indicator])
-    #     min_val = np.max(np.min(correctness_scores, axis=0))
-    #     max_val = np.min(np.max(correctness_scores, axis=0))
-    #     thresholds = np.linspace(min_val+epsilon, max_val-epsilon, 10)
-    #     ax = make_plots.AUROC_vs_Correctness_average(correctness_scores, confidence, thresholds, ax=ax, label=indicator)
-    # # ax.set_title(f'AUROC vs Correctness Threshold {model} {dataset} {args.correctness}')
-    # ax.grid()
-    # ax.figure.savefig(f'{path}/auroc_vs_correctness_average_{model}_{dataset}_{args.correctness}.png')
-
-    fig, ax = plt.subplots()
-    # correctness_score = df['score'].to_numpy()
-    correctness_score = df['normalized_score_greedy'].to_numpy()
+    fig, ax = plt.subplots(figsize=(10, 10))
+    correctness_scores = np.stack(df['normalized_score_all'])
     for indicator in uncertainty_indicators:
-        confidence = -df[indicator].to_numpy()
-        thresholds = np.linspace(np.min(correctness_score)+epsilon, np.max(correctness_score)-epsilon, 10)
-        ax = make_plots.AUARC_vs_Correctness(correctness_score, confidence, thresholds, ax=ax, label=indicator)
-    # ax.set_title(f'AUROC vs Correctness Threshold {model} {dataset} {method} {args.correctness}')
+        confidence = np.stack(df[indicator]) if 'Verb' in indicator else -np.stack(df[indicator])
+        thresholds = np.linspace(np.min(correctness_scores)+epsilon, np.max(correctness_scores)-epsilon, 10)
+        ax = make_plots.AUARC_vs_Correctness_average(correctness_scores, confidence, thresholds, ax=ax, label=indicator)
     ax.grid()
-    # plt.xticks(rotation=45)
     plt.tight_layout()
-    ax.figure.savefig(f'{path}/auarc_vs_correctness_{model}_{dataset}_{args.correctness}.png')
+    ax.figure.savefig(f'{path}/auarc.pdf')
 
-    # correctness_scores = np.stack(df['normalized_score_all'])
-    # fig, ax = plt.subplots()
-    # for indicator in confidence_indicators:
-    #     confidence = np.stack(df[indicator]) if 'agreement' in indicator else -np.stack(df[indicator])
-    #     min_val = np.max(np.min(correctness_scores, axis=0))
-    #     max_val = np.min(np.max(correctness_scores, axis=0))
-    #     thresholds = np.linspace(min_val+epsilon, max_val-epsilon, 10)
-    #     ax = make_plots.AUARC_vs_Correctness_average(correctness_scores, confidence, thresholds, ax=ax, label=indicator)
-    # # ax.set_title(f'AUROC vs Correctness Threshold {model} {dataset} {args.correctness}')
-    # ax.grid()
-    # ax.figure.savefig(f'{path}/auarc_vs_correctness_average_{model}_{dataset}_{args.correctness}.png')
-
-    fig, ax = plt.subplots()
-    ax.violinplot(df[uncertainty_indicators],
+    def flatten(x):
+        x = np.stack(x).flatten()
+        return x
+    
+    fig, ax = plt.subplots(figsize=(10, 10))
+    ax.violinplot(df[uncertainty_indicators].apply(flatten, axis=0),
                 showmeans=False,
                 showmedians=True)
     # ax.set_title('Uncertainty value distribution')
     ax.set_xticks([y+1 for y in range(len(uncertainty_indicators))], labels=uncertainty_indicators)
     plt.grid()
-    plt.xlabel('Uncertainty Measures')
-    plt.ylabel('Uncertainty Scores')
+    plt.xlabel('Uncertainty/Confidence Measures')
+    plt.ylabel('Output of Uncertainty Measures')
     # plt.xticks(rotation=45)
     plt.tight_layout()
-    plt.savefig(f'{path}/uncertainty_histogram_{model}_{dataset}_{args.correctness}.png')
+    plt.savefig(f'{path}/uncertainty.pdf')
 
     # plot the histogram of correctness score
-    fig, ax = plt.subplots()
-    ax.hist(correctness_score, bins=20)
+    fig, ax = plt.subplots(figsize=(10, 10))
+    ax.hist(correctness_scores.flatten(), bins=20, color='dodgerblue', edgecolor='dodgerblue')
     # ax.set_title('Correctness score distribution')
-    ax.set_xlabel('Regression Correctness')
+    ax.set_xlabel(r'Correctness A')
     ax.set_ylabel('Frequency')
     plt.grid()
     plt.tight_layout()
-    plt.savefig(f'{path}/correctness_histogram_{model}_{dataset}_{args.correctness}.png')
+    plt.savefig(f'{path}/correctness.pdf')
 
-    correctness_scores = np.stack(df['normalized_score_greedy']).flatten()
+    plt.rcParams.update({'font.size': 30})
+    correctness_scores = np.stack(df['normalized_score_all']).flatten()
     for indicator, print_name in zip(uncertainty_indicators, uncertainty_indicators_print):
-        fig, ax = plt.subplots()
-        uncertainty = df[indicator].to_numpy()
-        ax = make_plots.indication_diagram(correctness=correctness_scores, uncertainties=uncertainty, fig=fig, ax=ax, num_bins=20)
-        ax.set_title(f'{indicator} distribution')
-        ax.set_xlabel(f'Percentage of {indicator} (%)', fontsize=15)
-        ax.set_ylabel('Percentage of Regressed Correctness (%)', fontsize=15)
+        fig, ax = plt.subplots(figsize=(10, 10))
+        confidence = -np.stack(df[indicator]) if 'Verb' in indicator else np.stack(df[indicator])
+        uncertainty = confidence.flatten()
+        # uncertainty = df[indicator].to_numpy() if 'Verb' not in indicator else -df[indicator].to_numpy()
+        ax = make_plots.indication_diagram(confidence='Verb' in indicator, correctness=correctness_scores, uncertainties=uncertainty, fig=fig, ax=ax, num_bins=20)
+        # ax.set_title(f'{indicator} distribution')
+        ax.set_xlabel(f'Percentage of {indicator} (%)', fontsize=30)
+        ax.set_ylabel('Percentage of Regressed Correctness (%)', fontsize=30)
         plt.grid()
         # plt.xticks(rotation=45)
         plt.tight_layout()
-        plt.savefig(f'{path}/{print_name}_erce_{model}_{dataset}_{args.correctness}.png')
-    
-    # correctness_scores = np.stack(df['normalized_score_all']).flatten()
-    # for indicator in confidence_indicators:
-    #     fig, ax = plt.subplots()
-    #     confidence = -np.stack(df[indicator]).flatten() if 'agreement' in indicator else np.stack(df[indicator]).flatten()
-    #     ax = make_plots.indication_diagram(correctness=correctness_scores, uncertainties=confidence, ax=ax, fig=fig, num_bins=20)
-    #     # ax.set_title(f'{indicator} distribution')
-    #     ax.set_xlabel(f'Percentage of {indicator} (%)', fontsize=15)
-    #     ax.set_ylabel('Percentage of Regressed Correctness (%)', fontsize=15)
-    #     plt.grid()
-    #     plt.tight_layout()
-    #     plt.savefig(f'{path}/{indicator}_erce_{model}_{dataset}_{args.correctness}.png')
+        plt.savefig(f'{path}/{print_name}.pdf')

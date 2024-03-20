@@ -1,1 +1,0 @@
-python analysis.py --root_dir ../tmp
