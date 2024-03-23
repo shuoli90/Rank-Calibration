@@ -27,8 +27,8 @@ if __name__ == '__main__':
     print(f"Loading files from {args.root_dir}")
     file_names = [file for file in os.listdir(args.root_dir) if file.endswith('.json')]
     model = args.model.split('/')[-1]
-    collected_file = '_'.join([model, args.dataset, str(args.temperature)]) + '.json'
-    collected = json.load(open(os.path.join('../collected', collected_file)))
+    # collected_file = '_'.join([model, args.dataset, str(args.temperature)]) + '.json'
+    # collected = json.load(open(os.path.join('../collected', collected_file)))
     # compute the correctness score
     if os.path.exists(f'../tmp/{model}_{args.dataset}_{args.temperature}_{args.correctness}.json'):
         scores = json.load(open(f'../tmp/{model}_{args.dataset}_{args.temperature}_{args.correctness}.json'))
@@ -64,7 +64,8 @@ if __name__ == '__main__':
             def split(a, n):
                 k, m = divmod(len(a), n)
                 return [a[i*k+min(i, m):(i+1)*k+min(i+1, m)] for i in range(n)]
-            collecteds = split(collected, 10)
+            # collecteds = split(collected, 10)
+            collecteds = split(scores, 10)
             start = 0
             for col in collecteds:
                 p = multiprocessing.Process(target=compute_scores, args=(col, start, scores))
@@ -76,7 +77,8 @@ if __name__ == '__main__':
             scores = [score for score in scores]
         elif args.correctness in ['bert_similarity']:
             scores = []
-            for idx, collected_row in tqdm(enumerate(collected), total=len(collected)):
+            # for idx, collected_row in tqdm(enumerate(collected), total=len(collected)):
+            for idx, collected_row in tqdm(enumerate(scores), total=len(scores)):
                 score_tmp = {}
                 # question = collected_row['prompt'].split('\n')[-2].strip()
                 reference = collected_row['references'] if isinstance(collected_row['references'], list) else [collected_row['references']]
@@ -92,7 +94,8 @@ if __name__ == '__main__':
                         json.dump(scores, f)
         elif args.correctness in ['chatgpt']:
             scores = []
-            for idx, collected_row in tqdm(enumerate(collected), total=len(collected)):
+            # for idx, collected_row in tqdm(enumerate(collected), total=len(collected)):
+            for idx, collected_row in tqdm(enumerate(scores), total=len(scores)):
                 score_tmp = {}
                 question = collected_row['prompt'].split('\n')[-2].strip()
                 reference = collected_row['references'][0]
@@ -255,66 +258,91 @@ if __name__ == '__main__':
     plt.rcParams.update({'font.size': 30})
 
     correctness_scores = np.stack(df['normalized_score_all'])
-    fig, ax = plt.subplots(figsize=(10, 10))
-    for indicator in uncertainty_indicators:
-        confidence = np.stack(df[indicator]) if 'Verb' in indicator else -np.stack(df[indicator])
-        min_val = np.max(np.min(correctness_scores, axis=0))
-        max_val = np.min(np.max(correctness_scores, axis=0))
-        thresholds = np.linspace(min_val+epsilon, max_val-epsilon, 10)
-        ax = make_plots.AUROC_vs_Correctness_average(correctness_scores, confidence, thresholds, ax=ax, label=indicator)
-    ax.grid()
-    plt.tight_layout()
-    ax.figure.savefig(f'{path}/auroc.pdf')
+    # fig, ax = plt.subplots(figsize=(10, 10))
+    # for indicator in uncertainty_indicators:
+    #     confidence = np.stack(df[indicator]) if 'Verb' in indicator else -np.stack(df[indicator])
+    #     min_val = np.max(np.min(correctness_scores, axis=0))
+    #     max_val = np.min(np.max(correctness_scores, axis=0))
+    #     thresholds = np.linspace(min_val+epsilon, max_val-epsilon, 10)
+    #     ax = make_plots.AUROC_vs_Correctness_average(correctness_scores, confidence, thresholds, ax=ax, label=indicator)
+    # ax.grid()
+    # plt.tight_layout()
+    # ax.figure.savefig(f'{path}/auroc.pdf')
+
+    # fig, ax = plt.subplots(figsize=(10, 10))
+    # correctness_scores = np.stack(df['normalized_score_all'])
+    # for indicator in uncertainty_indicators:
+    #     confidence = np.stack(df[indicator]) if 'Verb' in indicator else -np.stack(df[indicator])
+    #     thresholds = np.linspace(np.min(correctness_scores)+epsilon, np.max(correctness_scores)-epsilon, 10)
+    #     ax = make_plots.AUARC_vs_Correctness_average(correctness_scores, confidence, thresholds, ax=ax, label=indicator)
+    # ax.grid()
+    # plt.tight_layout()
+    # ax.figure.savefig(f'{path}/auarc.pdf')
 
     fig, ax = plt.subplots(figsize=(10, 10))
     correctness_scores = np.stack(df['normalized_score_all'])
     for indicator in uncertainty_indicators:
         confidence = np.stack(df[indicator]) if 'Verb' in indicator else -np.stack(df[indicator])
         thresholds = np.linspace(np.min(correctness_scores)+epsilon, np.max(correctness_scores)-epsilon, 10)
-        ax = make_plots.AUARC_vs_Correctness_average(correctness_scores, confidence, thresholds, ax=ax, label=indicator)
+        ax = make_plots.AUPRC_vs_Correctness_average(correctness_scores, confidence, thresholds, ax=ax, label=indicator)
     ax.grid()
     plt.tight_layout()
-    ax.figure.savefig(f'{path}/auarc.pdf')
+    ax.figure.savefig(f'{path}/auprc.pdf')
 
-    def flatten(x):
-        x = np.stack(x).flatten()
-        return x
+    # def flatten(x):
+    #     x = np.stack(x).flatten()
+    #     return x
     
-    fig, ax = plt.subplots(figsize=(10, 10))
-    ax.violinplot(df[uncertainty_indicators].apply(flatten, axis=0),
-                showmeans=False,
-                showmedians=True)
-    # ax.set_title('Uncertainty value distribution')
-    ax.set_xticks([y+1 for y in range(len(uncertainty_indicators))], labels=uncertainty_indicators)
-    plt.grid()
-    plt.xlabel('Uncertainty/Confidence Measures')
-    plt.ylabel('Output of Uncertainty Measures')
-    # plt.xticks(rotation=45)
-    plt.tight_layout()
-    plt.savefig(f'{path}/uncertainty.pdf')
+    # fig, ax = plt.subplots(figsize=(10, 10))
+    # ax.violinplot(df[uncertainty_indicators].apply(flatten, axis=0),
+    #             showmeans=False,
+    #             showmedians=True, widths=1)
+    # # Change the linewidth
+    # for l in ax.lines:
+    #     l.set_linewidth(2)
 
-    # plot the histogram of correctness score
-    fig, ax = plt.subplots(figsize=(10, 10))
-    ax.hist(correctness_scores.flatten(), bins=20, color='dodgerblue', edgecolor='dodgerblue')
-    # ax.set_title('Correctness score distribution')
-    ax.set_xlabel(r'Correctness A')
-    ax.set_ylabel('Frequency')
-    plt.grid()
-    plt.tight_layout()
-    plt.savefig(f'{path}/correctness.pdf')
+    # ax.set_xticks([y+1 for y in range(len(uncertainty_indicators))], labels=uncertainty_indicators)
+    # plt.grid()
+    # plt.xlabel('Uncertainty/Confidence Measures')
+    # plt.ylabel('Output Ranges')
+    # # plt.xticks(rotation=45)
+    # plt.tight_layout()
+    # plt.savefig(f'{path}/uncertainty.pdf')
 
-    plt.rcParams.update({'font.size': 30})
-    correctness_scores = np.stack(df['normalized_score_all']).flatten()
-    for indicator, print_name in zip(uncertainty_indicators, uncertainty_indicators_print):
-        fig, ax = plt.subplots(figsize=(10, 10))
-        confidence = -np.stack(df[indicator]) if 'Verb' in indicator else np.stack(df[indicator])
-        uncertainty = confidence.flatten()
-        # uncertainty = df[indicator].to_numpy() if 'Verb' not in indicator else -df[indicator].to_numpy()
-        ax = make_plots.indication_diagram(confidence='Verb' in indicator, correctness=correctness_scores, uncertainties=uncertainty, fig=fig, ax=ax, num_bins=20)
-        # ax.set_title(f'{indicator} distribution')
-        ax.set_xlabel(f'Percentage of {indicator} (%)', fontsize=30)
-        ax.set_ylabel('Percentage of Regressed Correctness (%)', fontsize=30)
-        plt.grid()
-        # plt.xticks(rotation=45)
-        plt.tight_layout()
-        plt.savefig(f'{path}/{print_name}.pdf')
+    # # plot the histogram of correctness score
+    # fig, ax = plt.subplots(figsize=(10, 10))
+    # ax.hist(correctness_scores.flatten(), bins=20, color='dodgerblue', edgecolor='dodgerblue')
+    # # ax.set_title('Correctness score distribution')
+    # ax.set_xlabel(r'Correctness A')
+    # ax.set_ylabel('Frequency')
+    # plt.grid()
+    # plt.tight_layout()
+    # plt.savefig(f'{path}/correctness.pdf')
+
+    # plt.rcParams.update({'font.size': 30})
+    # correctness_scores = np.stack(df['normalized_score_all']).flatten()
+    # for indicator, print_name in zip(uncertainty_indicators, uncertainty_indicators_print):
+    #     fig, ax = plt.subplots(figsize=(10, 10))
+    #     confidence = -np.stack(df[indicator]) if 'Verb' in indicator else np.stack(df[indicator])
+    #     uncertainty = confidence.flatten()
+    #     # uncertainty = df[indicator].to_numpy() if 'Verb' not in indicator else -df[indicator].to_numpy()
+    #     ax = make_plots.indication_diagram(confidence='Verb' in indicator, correctness=correctness_scores, uncertainties=uncertainty, fig=fig, ax=ax, num_bins=20)
+    #     # ax.set_title(f'{indicator} distribution')
+    #     ax.legend(loc='upper right', frameon=False, fontsize=30)
+    #     ax.set_xlabel(f'Percentage of {indicator} (%)', fontsize=30)
+    #     ax.set_ylabel('Percentage of Regressed Correctness (%)', fontsize=30)
+    #     plt.grid()
+    #     # plt.xticks(rotation=45)
+    #     plt.tight_layout()
+    #     plt.savefig(f'{path}/{print_name}.pdf')
+
+    #     fig, ax = plt.subplots(figsize=(10, 10))
+    #     ax = make_plots.variability_diagram(confidence='Verb' in indicator, correctness=correctness_scores, uncertainties=uncertainty, fig=fig, ax=ax, num_bins=20)
+    #     # ax.set_title(f'{indicator} distribution')
+    #     ax.legend(loc='upper right', frameon=False, fontsize=30)
+    #     ax.set_xlabel(f'Percentage of {indicator} (%)', fontsize=30)
+    #     ax.set_ylabel('Variability of Conditioned Correctness', fontsize=30)
+    #     plt.grid()
+    #     # plt.xticks(rotation=45)
+    #     plt.tight_layout()
+    #     plt.savefig(f'{path}/{print_name}_variability.pdf')
