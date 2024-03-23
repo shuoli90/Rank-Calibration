@@ -57,7 +57,7 @@ if __name__ == '__main__':
     results = []
     seeds = list(range(20))
     for seed in seeds:
-        if args.dataset in ['triviaqa', 'nq-open', 'squad'] and model == 'gpt-3.5-turbo':
+        if model == 'gpt-3.5-turbo' and args.temperature == 1.0:
             data_verbalized = json.load(open(os.path.join(args.root_dir, file_names[3])))
             indices = np.random.choice(len(data_verbalized), len(data_verbalized), replace=True).tolist()
             data_verbalized_bootstrap = [data_verbalized[index] for index in indices]
@@ -102,11 +102,9 @@ if __name__ == '__main__':
             data_whitebox_bootstrap = [data_whitebox[index] for index in indices]
             data_blackbox_disagreement_bootstrap = [data_blackbox_disagreement[index] for index in indices]
             data_blackbox_agreement_bootstrap = [data_blackbox_agreement[index] for index in indices]
-            tmp = {'model':model, 'dataset':dataset,
-                            'metric':args.correctness, 'mode':args.mode, 'seed':seed, 'temperature':args.temperature}
             tmps = []
             for idx, (row_whitebox, row_blackbox_disagreement, row_blackbox_agreement) in tqdm(enumerate(zip(data_whitebox_bootstrap, data_blackbox_disagreement_bootstrap, data_blackbox_agreement_bootstrap)), total=len(data_whitebox)):
-                tmp = {'model':model, 'dataset':dataset, 'metric':args.correctness}
+                tmp = {'model':model, 'dataset':dataset, 'metric':args.correctness, 'seed':seed, 'temperature':args.temperature}
                 
                 tmp['ecc_c_disagreement'] = row_blackbox_disagreement['ecc_c']
                 tmp['degree_c_disagreement'] = row_blackbox_disagreement['degree_c']
@@ -136,7 +134,7 @@ if __name__ == '__main__':
                 tmps.append(tmp)
         df = pd.DataFrame(tmps).dropna(axis=0)
 
-        if args.dataset in ['triviaqa', 'nq-open', 'squad', 'meadow'] and model == 'gpt-3.5-turbo':
+        if model == 'gpt-3.5-turbo' and args.temperature == 1.0:
             uncertainty_indicators = ['ecc_u_agreement', 'degree_u_agreement', 'spectral_u_agreement', 'verbalized',
                                     'normalized_nll_all', 'unnormalized_nll_all', 'entropy_normalized', 'entropy_unnormalized']
         else:

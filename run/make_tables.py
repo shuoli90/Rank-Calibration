@@ -26,7 +26,7 @@ if __name__ == '__main__':
 
     uncertainty_indicators = ['ecc_u_agreement_erce', 'degree_u_agreement_erce', 'spectral_u_agreement_erce',
                             'unnormalized_nll_all_erce', 'entropy_unnormalized_erce', 'verbalized_erce']
-
+    
     # first table: results with original setup
     df_tmp = df[df['model'].isin(['Llama-2-7b-chat-hf', 'Llama-2-7b-hf', 'gpt-3.5-turbo'])]
     # rename "bert_similarity" to "bert"
@@ -50,105 +50,109 @@ if __name__ == '__main__':
     # bold lowest mean in each row
     # table = table.style.apply(lambda x: ["font-weight: bold" if v == min(x) else "" for v in x], axis=1)
     print(table.to_latex())
-    breakpoint()
 
-    # first table: results with original setup
-    df_tmp = df[df['model'].isin(['Llama-2-7b-chat-hf', 'Llama-2-7b-hf', 'gpt-3.5-turbo'])]
-    df_tmp = df_tmp[df_tmp['metric'] == 'rouge']
-    # filter out rows whose model is llama-2 and temperature is 1.0
-    df_tmp = df_tmp[~((df_tmp['model'] == 'Llama-2-7b-chat-hf') & (df_tmp['temperature'] == 1.0))]
-    df_tmp = df_tmp[~((df_tmp['model'] == 'Llama-2-7b-hf') & (df_tmp['temperature'] == 1.0))]
-    df_tmp = df_tmp[~((df_tmp['dataset'] == 'meadow'))]
-    # compute means and standard deviations across seeds
-    means = df_tmp.groupby(['model', 'dataset', 'metric', 'temperature']).mean().drop('seed', axis=1)[uncertainty_indicators]
-    stds = df_tmp.groupby(['model', 'dataset', 'metric', 'temperature']).std().drop('seed', axis=1)[uncertainty_indicators]
-    means.columns = [r'$U_{\rm Ecc}$',  r'$U_{\rm Deg}$', r'$U_{\rm EigV}$', r'$U_{\rm NLL}$', r'$U_{\rm SE}$']
-    stds.columns = [r'$U_{\rm Ecc}$',  r'$U_{\rm Deg}$', r'$U_{\rm EigV}$', r'$U_{\rm NLL}$', r'$U_{\rm SE}$']
-    # generate a latex table with means and stds as the subscript
-    table = pd.DataFrame()
-    for col in means.columns:
-        table[col] = [f'{means[col][mode]:.3f}$_{{\pm {stds[col][mode]:.3f}}}$' for mode in means.index]
-    table.index = means.index
-    table = table.droplevel([2,3])
-    print(table.to_latex())
-
-    # first table: results with original setup
-    df_tmp = df[df['model'].isin(['Llama-2-7b-chat-hf', 'Llama-2-7b-hf', 'gpt-3.5-turbo'])]
-    df_tmp = df_tmp[df_tmp['metric'] == 'bert_similarity']
-    # filter out rows whose model is llama-2 and temperature is 1.0
-    df_tmp = df_tmp[~((df_tmp['model'] == 'Llama-2-7b-chat-hf') & (df_tmp['temperature'] == 1.0))]
-    df_tmp = df_tmp[~((df_tmp['model'] == 'Llama-2-7b-hf') & (df_tmp['temperature'] == 1.0))]
-    df_tmp = df_tmp[~((df_tmp['dataset'] == 'meadow'))]
-    # compute means and standard deviations across seeds
-    means = df_tmp.groupby(['model', 'dataset', 'metric', 'temperature']).mean().drop('seed', axis=1)[uncertainty_indicators]
-    stds = df_tmp.groupby(['model', 'dataset', 'metric', 'temperature']).std().drop('seed', axis=1)[uncertainty_indicators]
-    means.columns = [r'$U_{\rm Ecc}$',  r'$U_{\rm Deg}$', r'$U_{\rm EigV}$', r'$U_{\rm NLL}$', r'$U_{\rm SE}$']
-    stds.columns = [r'$U_{\rm Ecc}$',  r'$U_{\rm Deg}$', r'$U_{\rm EigV}$', r'$U_{\rm NLL}$', r'$U_{\rm SE}$']
-    # generate a latex table with means and stds as the subscript
-    table = pd.DataFrame()
-    for col in means.columns:
-        table[col] = [f'{means[col][mode]:.3f}$_{{\pm {stds[col][mode]:.3f}}}$' for mode in means.index]
-    table.index = means.index
-    table = table.droplevel([2,3])
-    print(table.to_latex())
-
-    # first table: results with original setup
-    df_tmp = df[df['model'].isin(['Llama-2-7b-chat-hf', 'Llama-2-7b-hf', 'gpt-3.5-turbo'])]
-    df_tmp = df_tmp[df_tmp['metric'] == 'bert_similarity']
-    # filter out rows whose model is llama-2 and temperature is 1.0
-    df_tmp = df_tmp[~((df_tmp['model'] == 'Llama-2-7b-chat-hf') & (df_tmp['temperature'] == 1.0))]
-    df_tmp = df_tmp[~((df_tmp['model'] == 'Llama-2-7b-hf') & (df_tmp['temperature'] == 1.0))]
-    df_tmp = df_tmp[~((df_tmp['dataset'] != 'meadow'))]
-    # compute means and standard deviations across seeds
-    means = df_tmp.groupby(['model', 'dataset', 'metric', 'temperature']).mean().drop('seed', axis=1)[uncertainty_indicators]
-    stds = df_tmp.groupby(['model', 'dataset', 'metric', 'temperature']).std().drop('seed', axis=1)[uncertainty_indicators]
-    means.columns = [r'$U_{\rm Ecc}$',  r'$U_{\rm Deg}$', r'$U_{\rm EigV}$', r'$U_{\rm NLL}$', r'$U_{\rm SE}$']
-    stds.columns = [r'$U_{\rm Ecc}$',  r'$U_{\rm Deg}$', r'$U_{\rm EigV}$', r'$U_{\rm NLL}$', r'$U_{\rm SE}$']
-    # generate a latex table with means and stds as the subscript
-    table = pd.DataFrame()
-    for col in means.columns:
-        table[col] = [f'{means[col][mode]:.3f}$_{{\pm {stds[col][mode]:.3f}}}$' for mode in means.index]
-    table.index = means.index
-    table = table.droplevel([2,3])
-    print(table.to_latex())
-
+    try: 
+        path = os.path.join("../stats", "gpt_correctness")
+        os.makedirs(path, exist_ok = True) 
+    except OSError as error: 
+        print("Directory '%s' can not be created" % path) 
+    # first, plot cd with different metrics
     uncertainty_indicators = ['ecc_u_agreement_erce', 'degree_u_agreement_erce', 'spectral_u_agreement_erce',
-                            'unnormalized_nll_greedy_erce', 'entropy_unnormalized_erce']
-    df = df.melt(id_vars=['model', 'dataset', 'metric', 'temperature', 'seed'], var_name='indicator', value_name='score')
-    df['des'] = df['model'] + '_' + df['dataset'] + '_' + df['metric'] + '_' + df['temperature'].astype(str) + '_' + df['seed'].astype(str)
-    df['score'] = -df['score']
-    df = df[df['indicator'].isin(uncertainty_indicators)]
-    # change the names of the indicators to [r'$U_{\rm EigV}$', r'$U_{\rm Ecc}$', r'$U_{\rm Deg}$', r'$U_{\rm SE}$', r'$U_{\rm NLL}$']
-    df['indicator'] = df['indicator'].replace({'ecc_u_agreement_erce': r'$U_{\rm Ecc}$', 'degree_u_agreement_erce': r'$U_{\rm Deg}$', 'spectral_u_agreement_erce': r'$U_{\rm EigV}$', 'unnormalized_nll_greedy_erce': r'$U_{\rm NLL}$', 'entropy_unnormalized_erce': r'$U_{\rm SE}$'})
-    ranking.plot_cd_diagram(df, title=None, save_dir='../stats/plots/overall.pdf', col1='indicator', col2='des', col3='score', alpha=args.alpha)
+                            'unnormalized_nll_all_erce', 'entropy_unnormalized_erce', 'verbalized_erce']
+    df_gpt = df[df['model'] == 'gpt-3.5-turbo']
+    df_gpt_triviaqa = df_gpt[df_gpt['dataset'] == 'triviaqa']
+    df_gpt_triviaqa_10 = df_gpt_triviaqa[df_gpt_triviaqa['temperature'] == 1.0]
+    df_tmp = df_gpt_triviaqa_10.melt(id_vars=['model', 'dataset', 'metric', 'temperature', 'seed'], var_name='indicator', value_name='score')
+    df_tmp['des'] = df_tmp['model'] + '_' + df_tmp['dataset'] + '_' + df_tmp['metric'] + '_' + df_tmp['temperature'].astype(str) + '_' + df_tmp['seed'].astype(str)
+    scores_list = df_tmp['score'].tolist()
+    scores_lists = []
+    for item in scores_list:
+        if isinstance(item, float):
+            scores_lists.append(-item)
+        else:
+            scores_lists.append(-item[0])
+    df_tmp['score'] = scores_lists
+    df_tmp = df_tmp[df_tmp['indicator'].isin(uncertainty_indicators)]
+    df_tmp['indicator'] = df_tmp['indicator'].replace(
+        {'ecc_u_agreement_erce': r'$U_{\rm Ecc}$', 
+         'degree_u_agreement_erce': r'$U_{\rm Deg}$', 
+         'spectral_u_agreement_erce': r'$U_{\rm EigV}$', 
+         'unnormalized_nll_all_erce': r'$U_{\rm NLL}$', 
+         'entropy_unnormalized_erce': r'$U_{\rm SE}$',
+         'verbalized_erce': r'$C_{\rm Verb}$)'})
+    # plot CD diagram
+    for metric in ['rouge', 'bert_similarity', 'meteor', 'rouge1']:
+        df_tmp_metric = df_tmp[df_tmp['metric'] == metric]
+        ranking.plot_cd_diagram(df_tmp_metric, title=None, save_dir=f'{path}/gpt-3.5-turbo_{metric}.pdf', col1='indicator', col2='des', col3='score', alpha=args.alpha)
     
-    df_triviaqa = df[df['dataset'] == 'triviaqa']
-    df_triviaqa_llama2 = df_triviaqa[df_triviaqa['model'] == 'Llama-2-7b-chat-hf']
-    df_triviaqa_llama2_06 = df_triviaqa_llama2[df_triviaqa_llama2['temperature'] < 1.0]
-    df_triviaqa_llama2_06_rouge = df_triviaqa_llama2_06[df_triviaqa_llama2_06['metric'] == 'rouge']
-    # group by indicator and compute the mean and std
-    means = df_triviaqa_llama2_06_rouge[['indicator', 'score']].groupby('indicator').mean()
-    ranking.plot_cd_diagram(df_triviaqa_llama2_06_rouge, title=None, save_dir='../stats/plots/triviaqa_llama2_rouge.pdf', col1='indicator', col2='des', col3='score', alpha=args.alpha)
+    # second: plot cd with different temperatures
+    try: 
+        path = os.path.join("../stats", "gpt_temperature")
+        os.makedirs(path, exist_ok = True) 
+    except OSError as error: 
+        print("Directory '%s' can not be created" % path) 
+    uncertainty_indicators = ['ecc_u_agreement_erce', 'degree_u_agreement_erce', 'spectral_u_agreement_erce',
+                        'unnormalized_nll_all_erce', 'entropy_unnormalized_erce']
+    df_gpt_rouge = df_gpt[df_gpt['metric'] == 'rouge']
+    df_gpt_rouge_triviaqa = df_gpt_rouge[df_gpt_rouge['dataset'] == 'triviaqa']
+    df_tmp = df_gpt_rouge_triviaqa.melt(id_vars=['model', 'dataset', 'metric', 'temperature', 'seed'], var_name='indicator', value_name='score')
+    df_tmp = df_tmp[df_tmp['indicator'].isin(uncertainty_indicators)]
+    for temperature in [0.5, 1.0, 1.5]:
+        for indicator in uncertainty_indicators:
+            df_tmp.loc[(df_tmp['temperature'] == temperature) & (df_tmp['indicator'] == indicator), 'seed'] = list(range(20))
+    df_tmp['des'] = df_tmp['model'] + '_' + df_tmp['dataset'] + '_' + df_tmp['metric'] + '_' + df_tmp['temperature'].astype(str) + '_' + df_tmp['seed'].astype(str)
+    scores_list = df_tmp['score'].tolist()
+    scores_lists = []
+    for item in scores_list:
+        if isinstance(item, float):
+            scores_lists.append(-item)
+        else:
+            scores_lists.append(-item[0])
+    df_tmp['score'] = scores_lists
+    df_tmp['indicator'] = df_tmp['indicator'].replace(
+        {'ecc_u_agreement_erce': r'$U_{\rm Ecc}$', 
+         'degree_u_agreement_erce': r'$U_{\rm Deg}$', 
+         'spectral_u_agreement_erce': r'$U_{\rm EigV}$', 
+         'unnormalized_nll_all_erce': r'$U_{\rm NLL}$', 
+         'entropy_unnormalized_erce': r'$U_{\rm SE}$'})
+    # plot CD diagram
+    for temperature in [0.5, 1.0, 1.5]:
+        df_tmp_temperature = df_tmp[df_tmp['temperature'] == temperature]
+        ranking.plot_cd_diagram(df_tmp_temperature, title=None, save_dir=f'{path}/gpt-3.5-turbo_{temperature}.pdf', col1='indicator', col2='des', col3='score', alpha=args.alpha)
 
-    df_triviaqa = df[df['dataset'] == 'triviaqa']
-    df_triviaqa_gpt = df_triviaqa[df_triviaqa['model'] == 'gpt-3.5-turbo']
-    df_triviaqa_gpt_10 = df_triviaqa_llama2[df_triviaqa_llama2['temperature'] == 1.0]
-    df_triviaqa_gpt_10_rouge = df_triviaqa_llama2_06[df_triviaqa_llama2_06['metric'] == 'rouge']
-    # group by indicator and compute the mean and std
-    means = df_triviaqa_llama2_06_rouge[['indicator', 'score']].groupby('indicator').mean()
-    ranking.plot_cd_diagram(df_triviaqa_llama2_06_rouge, title=None, save_dir='../stats/plots/triviaqa_gpt_rouge.pdf', col1='indicator', col2='des', col3='score', alpha=args.alpha)
+    try: 
+        path = os.path.join("../stats", "llama_temperature")
+        os.makedirs(path, exist_ok = True) 
+    except OSError as error: 
+        print("Directory '%s' can not be created" % path) 
+    # third: plot cd with llama-2-chat, triviaqa, rouge
+    uncertainty_indicators = ['ecc_u_agreement_erce', 'degree_u_agreement_erce', 'spectral_u_agreement_erce',
+                        'unnormalized_nll_all_erce', 'entropy_unnormalized_erce']
+    df_llama = df[df['model'] == 'Llama-2-7b-chat-hf']
+    df_llama_triviaqa = df_llama[df_llama['dataset'] == 'triviaqa']
+    df_llama_triviaqa_rouge = df_llama_triviaqa[df_llama_triviaqa['metric'] == 'rouge']
+    df_tmp = df_llama_triviaqa_rouge.melt(id_vars=['model', 'dataset', 'metric', 'temperature', 'seed'], var_name='indicator', value_name='score')
+    df_tmp = df_tmp[df_tmp['indicator'].isin(uncertainty_indicators)]
+    df_tmp['des'] = df_tmp['model'] + '_' + df_tmp['dataset'] + '_' + df_tmp['metric'] + '_' + df_tmp['temperature'].astype(str) + '_' + df_tmp['seed'].astype(str)
+    scores_list = df_tmp['score'].tolist()
+    scores_lists = []
+    for item in scores_list:
+        if isinstance(item, float):
+            scores_lists.append(-item)
+        else:
+            scores_lists.append(-item[0])
+    df_tmp['score'] = scores_lists
+    df_tmp['indicator'] = df_tmp['indicator'].replace(
+        {'ecc_u_agreement_erce': r'$U_{\rm Ecc}$', 
+         'degree_u_agreement_erce': r'$U_{\rm Deg}$', 
+         'spectral_u_agreement_erce': r'$U_{\rm EigV}$', 
+         'unnormalized_nll_all_erce': r'$U_{\rm NLL}$', 
+         'entropy_unnormalized_erce': r'$U_{\rm SE}$'})
+    for temperature in [0.6, 1.0]:
+        if temperature == 0.6:
+            df_tmp_temperature = df_tmp[df_tmp['temperature'] < 1.0]
+        else:
+            df_tmp_temperature = df_tmp[df_tmp['temperature'] == 1.0]
+        ranking.plot_cd_diagram(df_tmp_temperature, title=None, save_dir=f'{path}/llama-2-chat_{temperature}.pdf', col1='indicator', col2='des', col3='score', alpha=args.alpha)
     
-    # plot the critical diagram for each dataset
-    for dataset in df['dataset'].unique():
-        try:
-            df_dataset = df[df['dataset'] == dataset]
-            ranking.plot_cd_diagram(df_dataset, title=None, save_dir=f'../stats/plots/{dataset}.pdf', col1='indicator', col2='des', col3='score', alpha=args.alpha)
-        except:
-            print('Could not plot critical diagram for', dataset)
-    
-    for model in df['model'].unique():
-        try:
-            df_model = df[df['model'] == model]
-            ranking.plot_cd_diagram(df_model, title=None, save_dir=f'../stats/plots/{model}.pdf', col1='indicator', col2='des', col3='score', alpha=args.alpha)
-        except:
-            print('Could not plot critical diagram for', model)
+    print('Plot finished')
