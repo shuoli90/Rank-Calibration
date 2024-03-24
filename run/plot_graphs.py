@@ -27,9 +27,8 @@ if __name__ == '__main__':
     print(f"Loading files from {args.root_dir}")
     file_names = [file for file in os.listdir(args.root_dir) if file.endswith('.json')]
     model = args.model.split('/')[-1]
-    # collected_file = '_'.join([model, args.dataset, str(args.temperature)]) + '.json'
-    # collected = json.load(open(os.path.join('../collected', collected_file)))
-
+    collected_file = '_'.join([model, args.dataset, str(args.temperature)]) + '.json'
+    collected = json.load(open(os.path.join('../collected', collected_file)))
     # compute the correctness score
     if os.path.exists(f'../tmp/{model}_{args.dataset}_{args.temperature}_{args.correctness}.json'):
         scores = json.load(open(f'../tmp/{model}_{args.dataset}_{args.temperature}_{args.correctness}.json'))
@@ -82,8 +81,8 @@ if __name__ == '__main__':
             scores = [score for score in scores]
         elif args.correctness in ['bert_similarity']:
             scores = []
-            # for idx, collected_row in tqdm(enumerate(collected), total=len(collected)):
-            for idx, collected_row in tqdm(enumerate(scores), total=len(scores)):
+            for idx, collected_row in tqdm(enumerate(collected), total=len(collected)):
+            # for idx, collected_row in tqdm(enumerate(scores), total=len(scores)):
                 score_tmp = {}
                 # question = collected_row['prompt'].split('\n')[-2].strip()
                 reference = collected_row['references'] if isinstance(collected_row['references'], list) else [collected_row['references']]
@@ -99,8 +98,8 @@ if __name__ == '__main__':
                         json.dump(scores, f)
         elif args.correctness in ['chatgpt']:
             scores = []
-            # for idx, collected_row in tqdm(enumerate(collected), total=len(collected)):
-            for idx, collected_row in tqdm(enumerate(scores), total=len(scores)):
+            for idx, collected_row in tqdm(enumerate(collected), total=len(collected)):
+            # for idx, collected_row in tqdm(enumerate(scores), total=len(scores)):
                 score_tmp = {}
                 question = collected_row['prompt'].split('\n')[-2].strip()
                 reference = collected_row['references'][0]
