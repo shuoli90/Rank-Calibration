@@ -2,6 +2,7 @@ import numpy as np
 from scipy.stats import rankdata
 import warnings
 from scipy.stats import norm
+from sklearn.metrics import precision_recall_curve, auc
 
 def plugin_ece_est(correctness, confidences, num_bins, p=2, debias=True):
     '''
@@ -78,6 +79,20 @@ def AUARC(labels, confidences):
             arc = np.mean(labels_tmp)
         arcs.append(arc)
     return np.trapz(arcs, rejection_rate)
+
+def AUPRC(labels, confidences):
+    # An precision recall curve (PRC) is a function representating the precision of a classifier \
+    # as a function of its recall. 
+    min_conf, max_conf = np.min(confidences), np.max(confidences)
+    
+    # Perform min-max normalization; do not affet AUPRC values
+    normalized_confidences = (confidences - min_conf) / (max_conf - min_conf)
+    precision, recall, _ = precision_recall_curve(labels, normalized_confidences)
+    
+    # Compute the area under the precision-recall curve
+    auprc = auc(recall, precision)
+    
+    return auprc
 
 def plugin_RCE_est(correctness, uncertainties, num_bins=20, p=1, use_kernel = False, sigma=0.1, **kwargs):
     '''
@@ -313,7 +328,8 @@ def regressed_correctness_vs_uncertainty_cdf(correctness, uncertainties, num_bin
     '''
     Compute the regressed correctness levels with binning or kernel smoothing.
     Input:
-        sorted_correctness: (a_1, ..., a_n) \in R^n pre-sorted according to the indexes of uncertainties
+        correctness: (a_1, ..., a_n) \in R^n 
+        uncertainties: (u_1, ..., u_n ) \in R^n
     Output:
         uncertainty_cdfs: (p_1=0, ..., p_n=1) \in R^n the CDF estimates of sorted uncertainties
         regressed_correctness: (\bar{a}_1, ..., \bar{a}_n) \in R^n the regressed correctness 
@@ -342,3 +358,29 @@ def regressed_correctness_vs_uncertainty_cdf(correctness, uncertainties, num_bin
                 kernel_mat[j][i] = kernel_mat[i][j]
         regressed_correctness = kernel_mat@sorted_correctness/kernel_mat.sum(axis=1)
         return regressed_correctness, uncertainty_cdfs
+    
+def correctness_variability_vs_uncertainty_cdf(correctness, uncertainties, num_bins = 20):
+    '''
+    Compute the correctness variability levels with binning or kernel smoothing.
+    Input:
+        correctness: (a_1, ..., a_n) \in R^n 
+        uncertainties: (u_1, ..., u_n ) \in R^n
+    Output:
+        correctness_bin_means: (\bar{a}_1, ..., \bar{a}_B) \in R^B the regressed correctness 
+            listed for each bin
+        correctness_bin_stds: (s_1, ..., s_B) \in R^B the standard deviation of correctness 
+            listed for each bin
+    '''
+    n = len(uncertainties)
+    sorted_indices = np.argsort(uncertainties)
+    sorted_correctness = correctness[sorted_indices]
+    # sorted_uncertainties = unceqrtainties[np.argsort(sorted_indices)]
+    correctness_bin_means = np.zeros(num_bins)
+    correctness_bin_stds = np.zeros(num_bins)
+    bin_endpoints = [round(ele) for ele in np.linspace(0, n, num_bins+1)]
+    for idx_bin in range(1, num_bins+1):
+        lo, hi = bin_endpoints[idx_bin-1], bin_endpoints[idx_bin]
+        if hi > lo:
+            correctness_bin_means[idx_bin-1] = np.mean(sorted_correctness[lo:hi])
+            correctness_bin_stds[idx_bin-1] = np.std(sorted_correctness[lo:hi])
+    return correctness_bin_means, correctness_bin_stds
