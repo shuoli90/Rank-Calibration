@@ -61,9 +61,10 @@ if __name__ == '__main__':
         entropy_normalized = SE.compute_scores([""], [generations], nlls=[normalized_nll])
         result['entropy_normalized'] = entropy_normalized[0].item()
         results.append(result)
+        breakpoint()
 
-        if idx % 10 == 0:
-            json.dump(results, open(f'../tmp/calibrate_{model}_{args.dataset}_{args.temperature}_none_whitebox.json', 'w'))
+        # if idx % 10 == 0:
+        #     json.dump(results, open(f'../tmp/calibrate_{model}_{args.dataset}_{args.temperature}_none_whitebox.json', 'w'))
     # generate pandas dataframe from results
     json.dump(results, open(f'../tmp/calibrate_{model}_{args.dataset}_{args.temperature}_none_whitebox.json', 'w'))
 

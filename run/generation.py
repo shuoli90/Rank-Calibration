@@ -65,8 +65,14 @@ if __name__ == '__main__':
 
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=False, collate_fn=collate_fn)
     model = args.model.split('/')[-1]
+    # if os.path.exists(f'../collected/{model}_{args.dataset}_{args.temperature}.json'):
+    #     results = json.load(open(f'../collected/{model}_{args.dataset}_{args.temperature}.json'))
+    # else:
     results = []
+    collected_length = len(results)
     for idx, (prompts, answers) in tqdm(enumerate(dataloader), total=len(dataloader)):
+        if idx < collected_length:
+            continue
         generateds, transition_scores = pipe.generate(
                                     prompts, max_length=args.max_length, 
                                     num_return_sequences=args.num_return_sequences, 

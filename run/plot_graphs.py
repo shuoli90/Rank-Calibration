@@ -8,17 +8,17 @@ import numpy as np
 import pandas as pd
 import multiprocessing
 import json
-from sklearn.metrics import roc_curve
 from utils import make_plots
 from metrics import correctness
+import matplotlib.patches as patches
 epsilon = 1e-3
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--root_dir', type=str, default='../tmp')
     parser.add_argument('--correctness', type=str, default='rouge')
-    parser.add_argument('--model', type=str, default='meta-llama/Llama-2-7b-chat-hf')
-    parser.add_argument('--temperature', type=float, default=0.6)
+    parser.add_argument('--model', type=str, default='gpt-3.5-turbo')
+    parser.add_argument('--temperature', type=float, default=1.0)
     parser.add_argument('--dataset', type=str, default='triviaqa')
     parser.add_argument('--mode', type=str, default='rougeL')
     args = parser.parse_args()
@@ -27,12 +27,16 @@ if __name__ == '__main__':
     print(f"Loading files from {args.root_dir}")
     file_names = [file for file in os.listdir(args.root_dir) if file.endswith('.json')]
     model = args.model.split('/')[-1]
-    # collected_file = '_'.join([model, args.dataset, str(args.temperature)]) + '.json'
-    # collected = json.load(open(os.path.join('../collected', collected_file)))
+    collected_file = '_'.join([model, args.dataset, str(args.temperature)]) + '.json'
+    collected = json.load(open(os.path.join('../collected', collected_file)))
     # compute the correctness score
     if os.path.exists(f'../tmp/{model}_{args.dataset}_{args.temperature}_{args.correctness}.json'):
         scores = json.load(open(f'../tmp/{model}_{args.dataset}_{args.temperature}_{args.correctness}.json'))
     else:
+        if args.correctness == 'rouge1':
+            args.correctness = 'rouge'
+            args.mode = 'rouge1'
+
          # setup generation correctness score
         if args.correctness in ['rouge', 'bleu', 'meteor']:
             SCORE = correctness.Score(metric_name=args.correctness, mode=args.mode)
@@ -77,8 +81,8 @@ if __name__ == '__main__':
             scores = [score for score in scores]
         elif args.correctness in ['bert_similarity']:
             scores = []
-            # for idx, collected_row in tqdm(enumerate(collected), total=len(collected)):
-            for idx, collected_row in tqdm(enumerate(scores), total=len(scores)):
+            for idx, collected_row in tqdm(enumerate(collected), total=len(collected)):
+            # for idx, collected_row in tqdm(enumerate(scores), total=len(scores)):
                 score_tmp = {}
                 # question = collected_row['prompt'].split('\n')[-2].strip()
                 reference = collected_row['references'] if isinstance(collected_row['references'], list) else [collected_row['references']]
@@ -94,8 +98,8 @@ if __name__ == '__main__':
                         json.dump(scores, f)
         elif args.correctness in ['chatgpt']:
             scores = []
-            # for idx, collected_row in tqdm(enumerate(collected), total=len(collected)):
-            for idx, collected_row in tqdm(enumerate(scores), total=len(scores)):
+            for idx, collected_row in tqdm(enumerate(collected), total=len(collected)):
+            # for idx, collected_row in tqdm(enumerate(scores), total=len(scores)):
                 score_tmp = {}
                 question = collected_row['prompt'].split('\n')[-2].strip()
                 reference = collected_row['references'][0]
@@ -109,8 +113,12 @@ if __name__ == '__main__':
                 if idx % 10 == 0:
                     with open(f'../tmp/{model}_{args.dataset}_{args.temperature}_{args.correctness}.json', 'w') as f:
                         json.dump(scores, f)
-        with open(f'../tmp/{model}_{args.dataset}_{args.temperature}_{args.correctness}.json', 'w') as f:
-            json.dump(scores, f)
+        if args.correctness == 'rouge':
+            with open(f'../tmp/{model}_{args.dataset}_{args.temperature}_{args.mode}.json', 'w') as f:
+                json.dump(scores, f)
+        else:
+            with open(f'../tmp/{model}_{args.dataset}_{args.temperature}_{args.correctness}.json', 'w') as f:
+                json.dump(scores, f)
         exit(0)
     scores = pd.DataFrame(scores).dropna(axis=0)
     
@@ -224,8 +232,6 @@ if __name__ == '__main__':
             results.append(result)
         df = pd.DataFrame(results).dropna(axis=0)
 
-
-
     if model == 'gpt-3.5-turbo':
         uncertainty_indicators = [r'$U_{\rm EigV}$', r'$U_{\rm Ecc}$', r'$U_{\rm Deg}$', r'$U_{\rm SE}$', r'$U_{\rm NLL}$', r'$C_{\rm Verb}$']
         uncertainty_indicators_print = ['EigV', 'Ecc', 'Deg', 'SE', 'NLL', 'Verb']
@@ -242,18 +248,6 @@ if __name__ == '__main__':
 
     # change plot font size
     plt.rcParams.update({'font.size': 30})
-
-    # fig, ax = plt.subplots(figsize=(10, 10))
-    # # correctness_score = df['score'].to_numpy()
-    # correctness_score = df['normalized_score_greedy'].to_numpy()
-    # for indicator in uncertainty_indicators:
-    #     confidence = -df[indicator].to_numpy() if indicator != r'$C_{\rm Verb}$' else df[indicator].to_numpy()
-    #     thresholds = np.linspace(np.min(correctness_score)+epsilon, np.max(correctness_score)-epsilon, 10)
-    #     ax = make_plots.AUROC_vs_Correctness(correctness_score, confidence, thresholds, ax=ax, label=indicator)
-    # ax.set_title(f'AUROC vs Correctness Threshold {model} {dataset} {method} {args.correctness}')
-    # ax.grid()
-    # plt.tight_layout()
-    # ax.figure.savefig(f'{path}/auroc.pdf')
 
     plt.rcParams.update({'font.size': 30})
 
@@ -293,31 +287,28 @@ if __name__ == '__main__':
     #     x = np.stack(x).flatten()
     #     return x
     
-    # fig, ax = plt.subplots(figsize=(10, 10))
-    # ax.violinplot(df[uncertainty_indicators].apply(flatten, axis=0),
-    #             showmeans=False,
-    #             showmedians=True, widths=1)
-    # # Change the linewidth
-    # for l in ax.lines:
-    #     l.set_linewidth(2)
+    fig, ax = plt.subplots(figsize=(10, 10))
+    ax.violinplot(df[uncertainty_indicators].apply(flatten, axis=0),
+                showmeans=False,
+                showmedians=True)
+    # ax.set_title('Uncertainty value distribution')
+    ax.set_xticks([y+1 for y in range(len(uncertainty_indicators))], labels=uncertainty_indicators)
+    plt.grid()
+    plt.xlabel('Uncertainty/Confidence Measures')
+    plt.ylabel('Output of Uncertainty Measures')
+    # plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig(f'{path}/uncertainty.pdf')
 
-    # ax.set_xticks([y+1 for y in range(len(uncertainty_indicators))], labels=uncertainty_indicators)
-    # plt.grid()
-    # plt.xlabel('Uncertainty/Confidence Measures')
-    # plt.ylabel('Output Ranges')
-    # # plt.xticks(rotation=45)
-    # plt.tight_layout()
-    # plt.savefig(f'{path}/uncertainty.pdf')
-
-    # # plot the histogram of correctness score
-    # fig, ax = plt.subplots(figsize=(10, 10))
-    # ax.hist(correctness_scores.flatten(), bins=20, color='dodgerblue', edgecolor='dodgerblue')
-    # # ax.set_title('Correctness score distribution')
-    # ax.set_xlabel(r'Correctness A')
-    # ax.set_ylabel('Frequency')
-    # plt.grid()
-    # plt.tight_layout()
-    # plt.savefig(f'{path}/correctness.pdf')
+    # plot the histogram of correctness score
+    fig, ax = plt.subplots(figsize=(10, 10))
+    ax.hist(correctness_scores.flatten(), bins=20, color='dodgerblue', edgecolor='dodgerblue')
+    # ax.set_title('Correctness score distribution')
+    ax.set_xlabel(r'Correctness A')
+    ax.set_ylabel('Frequency')
+    plt.grid()
+    plt.tight_layout()
+    plt.savefig(f'{path}/correctness.pdf')
 
     # plt.rcParams.update({'font.size': 30})
     # correctness_scores = np.stack(df['normalized_score_all']).flatten()
