@@ -26,7 +26,7 @@ if __name__ == '__main__':
 
     uncertainty_indicators = ['ecc_u_agreement_erce', 'degree_u_agreement_erce', 'spectral_u_agreement_erce',
                             'unnormalized_nll_all_erce', 'entropy_unnormalized_erce', 'verbalized_erce']
-    
+
     # first table: results with original setup
     df_tmp = df[df['model'].isin(['Llama-2-7b-chat-hf', 'Llama-2-7b-hf', 'gpt-3.5-turbo'])]
     # rename "bert_similarity" to "bert"

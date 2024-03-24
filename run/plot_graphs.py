@@ -29,6 +29,7 @@ if __name__ == '__main__':
     model = args.model.split('/')[-1]
     collected_file = '_'.join([model, args.dataset, str(args.temperature)]) + '.json'
     collected = json.load(open(os.path.join('../collected', collected_file)))
+
     # compute the correctness score
     if os.path.exists(f'../tmp/{model}_{args.dataset}_{args.temperature}_{args.correctness}.json'):
         scores = json.load(open(f'../tmp/{model}_{args.dataset}_{args.temperature}_{args.correctness}.json'))
@@ -252,26 +253,16 @@ if __name__ == '__main__':
     plt.rcParams.update({'font.size': 30})
 
     correctness_scores = np.stack(df['normalized_score_all'])
-    # fig, ax = plt.subplots(figsize=(10, 10))
-    # for indicator in uncertainty_indicators:
-    #     confidence = np.stack(df[indicator]) if 'Verb' in indicator else -np.stack(df[indicator])
-    #     min_val = np.max(np.min(correctness_scores, axis=0))
-    #     max_val = np.min(np.max(correctness_scores, axis=0))
-    #     thresholds = np.linspace(min_val+epsilon, max_val-epsilon, 10)
-    #     ax = make_plots.AUROC_vs_Correctness_average(correctness_scores, confidence, thresholds, ax=ax, label=indicator)
-    # ax.grid()
-    # plt.tight_layout()
-    # ax.figure.savefig(f'{path}/auroc.pdf')
-
-    # fig, ax = plt.subplots(figsize=(10, 10))
-    # correctness_scores = np.stack(df['normalized_score_all'])
-    # for indicator in uncertainty_indicators:
-    #     confidence = np.stack(df[indicator]) if 'Verb' in indicator else -np.stack(df[indicator])
-    #     thresholds = np.linspace(np.min(correctness_scores)+epsilon, np.max(correctness_scores)-epsilon, 10)
-    #     ax = make_plots.AUARC_vs_Correctness_average(correctness_scores, confidence, thresholds, ax=ax, label=indicator)
-    # ax.grid()
-    # plt.tight_layout()
-    # ax.figure.savefig(f'{path}/auarc.pdf')
+    fig, ax = plt.subplots(figsize=(10, 10))
+    for indicator in uncertainty_indicators:
+        confidence = np.stack(df[indicator]) if 'Verb' in indicator else -np.stack(df[indicator])
+        min_val = np.max(np.min(correctness_scores, axis=0))
+        max_val = np.min(np.max(correctness_scores, axis=0))
+        thresholds = np.linspace(min_val+epsilon, max_val-epsilon, 10)
+        ax = make_plots.AUROC_vs_Correctness_average(correctness_scores, confidence, thresholds, ax=ax, label=indicator)
+    ax.grid()
+    plt.tight_layout()
+    ax.figure.savefig(f'{path}/auroc.pdf')
 
     fig, ax = plt.subplots(figsize=(10, 10))
     correctness_scores = np.stack(df['normalized_score_all'])
@@ -288,18 +279,23 @@ if __name__ == '__main__':
     #     return x
     
     fig, ax = plt.subplots(figsize=(10, 10))
-    ax.violinplot(df[uncertainty_indicators].apply(flatten, axis=0),
-                showmeans=False,
-                showmedians=True)
-    # ax.set_title('Uncertainty value distribution')
-    ax.set_xticks([y+1 for y in range(len(uncertainty_indicators))], labels=uncertainty_indicators)
+    spacing = 0.3  # spacing between hat groups
+    width = 0.7
+    # plot the value range of the uncertainty measures
+    for idx, indicator in enumerate(uncertainty_indicators):
+        confidence = -np.stack(df[indicator]) if 'Verb' in indicator else np.stack(df[indicator])
+        uncertainty = confidence.flatten()
+        uncertainty_max = np.max(uncertainty)
+        uncertainty_min = np.min(uncertainty)
+        ax.bar(idx, uncertainty_max-uncertainty_min, width, bottom=uncertainty_min, label=indicator)
     plt.grid()
+    plt.xticks(range(len(uncertainty_indicators)), uncertainty_indicators)
     plt.xlabel('Uncertainty/Confidence Measures')
-    plt.ylabel('Output of Uncertainty Measures')
+    plt.ylabel('Output Ranges')
     # plt.xticks(rotation=45)
     plt.tight_layout()
     plt.savefig(f'{path}/uncertainty.pdf')
-
+    
     # plot the histogram of correctness score
     fig, ax = plt.subplots(figsize=(10, 10))
     ax.hist(correctness_scores.flatten(), bins=20, color='dodgerblue', edgecolor='dodgerblue')
