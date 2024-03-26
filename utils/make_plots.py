@@ -23,7 +23,7 @@ def AUROC_vs_Correctness(correctness, confidence, thresholds, ax, plot=True, **k
     # plot
     if plot:
         df = pd.DataFrame(dict(AUROC=aurocs, Threshold=thresholds))
-        sns.lineplot(x="Threshold", y="AUROC", data=df, ax=ax, **kwargs)
+        sns.lineplot(x="Threshold", y="AUROC", data=df, ax=ax, linewidth=3, **kwargs)
         return ax
     else:
         return aurocs
@@ -47,7 +47,7 @@ def AUROC_vs_Correctness_average(correctnesses, confidences, thresholds, ax, plo
     # plot
     if plot:
         df = pd.DataFrame(dict(AUROC=aurocs, Threshold=thresholds))
-        sns.lineplot(x="Threshold", y="AUROC", data=df, ax=ax, **kwargs)
+        sns.lineplot(x="Threshold", y="AUROC", data=df, ax=ax, linewidth=3, **kwargs)
         return ax
     else:
         return aurocs
@@ -67,7 +67,7 @@ def AUARC_vs_Correctness(correctness, confidence, thresholds, ax, plot=True, **k
     # plot
     if plot:
         df = pd.DataFrame(dict(AUARC=auarcs, Threshold=thresholds))
-        sns.lineplot(x="Threshold", y="AUARC", data=df, ax=ax, **kwargs)
+        sns.lineplot(x="Threshold", y="AUARC", data=df, ax=ax, linewidth=3, **kwargs)
         return ax
     else:
         return auarcs
@@ -91,7 +91,7 @@ def AUARC_vs_Correctness_average(correctnesses, confidences, thresholds, ax, plo
     # plot
     if plot:
         df = pd.DataFrame(dict(AUARC=auarcs, Threshold=thresholds))
-        sns.lineplot(x="Threshold", y="AUARC", data=df, ax=ax, **kwargs)
+        sns.lineplot(x="Threshold", y="AUARC", data=df, ax=ax, linewidth=3, **kwargs)
         return ax
     else:
         return auarcs
@@ -111,7 +111,7 @@ def AUPRC_vs_Correctness(correctness, confidence, thresholds, ax, plot=True, **k
     # plot
     if plot:
         df = pd.DataFrame(dict(AUPRC=auprcs, Threshold=thresholds))
-        sns.lineplot(x="Threshold", y="AUPRC", data=df, ax=ax, **kwargs)
+        sns.lineplot(x="Threshold", y="AUPRC", data=df, ax=ax, linewidth=3, **kwargs)
         return ax
     else:
         return auprcs
@@ -136,7 +136,7 @@ def AUPRC_vs_Correctness_average(correctnesses, confidences, thresholds, ax, plo
     # plot
     if plot:
         df = pd.DataFrame(dict(AUPRC=auprcs, Threshold=thresholds))
-        sns.lineplot(x="Threshold", y="AUPRC", data=df, ax=ax, **kwargs)
+        sns.lineplot(x="Threshold", y="AUPRC", data=df, ax=ax, linewidth=3, **kwargs)
         return ax
     else:
         return auprcs
