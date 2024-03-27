@@ -9,7 +9,7 @@ import pandas as pd
 import multiprocessing
 import json
 from utils import make_plots
-from metrics import correctness
+from metrics import correctness, calibration
 import matplotlib.patches as patches
 epsilon = 1e-3
 
@@ -28,7 +28,7 @@ if __name__ == '__main__':
     file_names = [file for file in os.listdir(args.root_dir) if file.endswith('.json')]
     model = args.model.split('/')[-1]
     collected_file = '_'.join([model, args.dataset, str(args.temperature)]) + '.json'
-    collected = json.load(open(os.path.join('../collected', collected_file)))
+    # collected = json.load(open(os.path.join('../collected', collected_file)))
 
     # compute the correctness score
     if os.path.exists(f'../tmp/{model}_{args.dataset}_{args.temperature}_{args.correctness}.json'):
@@ -248,97 +248,111 @@ if __name__ == '__main__':
         print("Directory '%s' can not be created" % path) 
 
     # change plot font size
-    plt.rcParams.update({'font.size': 40})
+    # plt.rcParams.update({'font.size': 40})
 
-    correctness_scores = np.stack(df['normalized_score_all'])
-    fig, ax = plt.subplots(figsize=(10, 10))
-    for indicator in uncertainty_indicators:
-        confidence = np.stack(df[indicator]) if 'Verb' in indicator else -np.stack(df[indicator])
-        min_val = np.max(np.min(correctness_scores, axis=0))
-        max_val = np.min(np.max(correctness_scores, axis=0))
-        thresholds = np.linspace(min_val+epsilon, max_val-epsilon, 10)
-        ax = make_plots.AUROC_vs_Correctness_average(correctness_scores, confidence, thresholds, ax=ax, label=indicator)
-    ax.grid()
-    plt.tight_layout()
-    ax.figure.savefig(f'{path}/auroc.pdf')
+    # correctness_scores = np.stack(df['normalized_score_all'])
+    # fig, ax = plt.subplots(figsize=(10, 10))
+    # for indicator in uncertainty_indicators:
+    #     confidence = np.stack(df[indicator]) if 'Verb' in indicator else -np.stack(df[indicator])
+    #     min_val = np.max(np.min(correctness_scores, axis=0))
+    #     max_val = np.min(np.max(correctness_scores, axis=0))
+    #     thresholds = np.linspace(min_val+epsilon, max_val-epsilon, 10)
+    #     ax = make_plots.AUROC_vs_Correctness_average(correctness_scores, confidence, thresholds, ax=ax, label=indicator)
+    # ax.grid()
+    # plt.tight_layout()
+    # ax.figure.savefig(f'{path}/auroc.pdf')
 
-    fig, ax = plt.subplots(figsize=(10, 10))
-    correctness_scores = np.stack(df['normalized_score_all'])
-    for indicator in uncertainty_indicators:
-        confidence = np.stack(df[indicator]) if 'Verb' in indicator else -np.stack(df[indicator])
-        thresholds = np.linspace(np.min(correctness_scores)+epsilon, np.max(correctness_scores)-epsilon, 10)
-        ax = make_plots.AUARC_vs_Correctness_average(correctness_scores, confidence, thresholds, ax=ax, label=indicator)
-    ax.grid()
-    plt.tight_layout()
-    ax.figure.savefig(f'{path}/auarc.pdf')
+    # fig, ax = plt.subplots(figsize=(10, 10))
+    # correctness_scores = np.stack(df['normalized_score_all'])
+    # for indicator in uncertainty_indicators:
+    #     confidence = np.stack(df[indicator]) if 'Verb' in indicator else -np.stack(df[indicator])
+    #     thresholds = np.linspace(np.min(correctness_scores)+epsilon, np.max(correctness_scores)-epsilon, 10)
+    #     ax = make_plots.AUARC_vs_Correctness_average(correctness_scores, confidence, thresholds, ax=ax, label=indicator)
+    # ax.grid()
+    # plt.tight_layout()
+    # ax.figure.savefig(f'{path}/auarc.pdf')
 
-    fig, ax = plt.subplots(figsize=(10, 10))
-    correctness_scores = np.stack(df['normalized_score_all'])
-    for indicator in uncertainty_indicators:
-        confidence = np.stack(df[indicator]) if 'Verb' in indicator else -np.stack(df[indicator])
-        thresholds = np.linspace(np.min(correctness_scores)+epsilon, np.max(correctness_scores)-epsilon, 10)
-        ax = make_plots.AUPRC_vs_Correctness_average(correctness_scores, confidence, thresholds, ax=ax, label=indicator)
-    ax.grid()
-    plt.tight_layout()
-    ax.figure.savefig(f'{path}/auprc.pdf')
+    # fig, ax = plt.subplots(figsize=(10, 10))
+    # correctness_scores = np.stack(df['normalized_score_all'])
+    # for indicator in uncertainty_indicators:
+    #     confidence = np.stack(df[indicator]) if 'Verb' in indicator else -np.stack(df[indicator])
+    #     thresholds = np.linspace(np.min(correctness_scores)+epsilon, np.max(correctness_scores)-epsilon, 10)
+    #     ax = make_plots.AUPRC_vs_Correctness_average(correctness_scores, confidence, thresholds, ax=ax, label=indicator)
+    # ax.grid()
+    # plt.tight_layout()
+    # ax.figure.savefig(f'{path}/auprc.pdf')
 
     # def flatten(x):
     #     x = np.stack(x).flatten()
     #     return x
     
-    fig, ax = plt.subplots(figsize=(10, 10))
-    spacing = 0.3  # spacing between hat groups
-    width = 0.7
-    # plot the value range of the uncertainty measures
-    for idx, indicator in enumerate(uncertainty_indicators):
-        confidence = -np.stack(df[indicator]) if 'Verb' in indicator else np.stack(df[indicator])
-        uncertainty = confidence.flatten()
-        uncertainty_max = np.max(uncertainty)
-        uncertainty_min = np.min(uncertainty)
-        ax.bar(idx, uncertainty_max-uncertainty_min, width, bottom=uncertainty_min, label=indicator)
-    plt.grid()
-    plt.xticks(range(len(uncertainty_indicators)), uncertainty_indicators)
-    plt.xlabel('Uncertainty/Confidence Measures')
-    plt.ylabel('Output Ranges')
-    # plt.xticks(rotation=45)
-    plt.tight_layout()
-    plt.savefig(f'{path}/uncertainty.pdf')
-    breakpoint()
+    # fig, ax = plt.subplots(figsize=(10, 10))
+    # spacing = 0.3  # spacing between hat groups
+    # width = 0.7
+    # # plot the value range of the uncertainty measures
+    # for idx, indicator in enumerate(uncertainty_indicators):
+    #     confidence = -np.stack(df[indicator]) if 'Verb' in indicator else np.stack(df[indicator])
+    #     uncertainty = confidence.flatten()
+    #     uncertainty_max = np.max(uncertainty)
+    #     uncertainty_min = np.min(uncertainty)
+    #     ax.bar(idx, uncertainty_max-uncertainty_min, width, bottom=uncertainty_min, label=indicator)
+    # plt.grid()
+    # plt.xticks(range(len(uncertainty_indicators)), uncertainty_indicators)
+    # plt.xlabel('Uncertainty/Confidence Measures')
+    # plt.ylabel('Output Ranges')
+    # # plt.xticks(rotation=45)
+    # plt.tight_layout()
+    # plt.savefig(f'{path}/uncertainty.pdf')
     
-    # plot the histogram of correctness score
-    fig, ax = plt.subplots(figsize=(10, 10))
-    ax.hist(correctness_scores.flatten(), bins=20, color='dodgerblue', edgecolor='dodgerblue')
-    # ax.set_title('Correctness score distribution')
-    ax.set_xlabel(r'Correctness A')
-    ax.set_ylabel('Frequency')
-    plt.grid()
-    plt.tight_layout()
-    plt.savefig(f'{path}/correctness.pdf')
+    # # plot the histogram of correctness score
+    # fig, ax = plt.subplots(figsize=(10, 10))
+    # ax.hist(correctness_scores.flatten(), bins=20, color='dodgerblue', edgecolor='dodgerblue')
+    # # ax.set_title('Correctness score distribution')
+    # ax.set_xlabel(r'Correctness A')
+    # ax.set_ylabel('Frequency')
+    # plt.grid()
+    # plt.tight_layout()
+    # plt.savefig(f'{path}/correctness.pdf')
+        
+    uncertainty_indicators = [r'$U_{\rm Deg}$']
+    uncertainty_indicators_print = ['Deg']
 
     plt.rcParams.update({'font.size': 30})
     correctness_scores = np.stack(df['normalized_score_all']).flatten()
     for indicator, print_name in zip(uncertainty_indicators, uncertainty_indicators_print):
-        fig, ax = plt.subplots(figsize=(10, 10))
+        # fig, ax = plt.subplots(figsize=(10, 10))
         confidence = -np.stack(df[indicator]) if 'Verb' in indicator else np.stack(df[indicator])
         uncertainty = confidence.flatten()
-        # uncertainty = df[indicator].to_numpy() if 'Verb' not in indicator else -df[indicator].to_numpy()
-        ax = make_plots.indication_diagram(confidence='Verb' in indicator, correctness=correctness_scores, uncertainties=uncertainty, fig=fig, ax=ax, num_bins=20)
-        # ax.set_title(f'{indicator} distribution')
+        # # uncertainty = df[indicator].to_numpy() if 'Verb' not in indicator else -df[indicator].to_numpy()
+        # ax = make_plots.indication_diagram(confidence='Verb' in indicator, correctness=correctness_scores, uncertainties=uncertainty, fig=fig, ax=ax, num_bins=20)
+        # ax.legend(loc='upper right', frameon=False, fontsize=30)
+        # ax.set_xlabel(f'Percentage of {indicator} (%)', fontsize=30)
+        # ax.set_ylabel('Percentage of Regressed Correctness (%)', fontsize=30)
+        # plt.grid()
+        # # plt.xticks(rotation=45)
+        # plt.tight_layout()
+        # plt.savefig(f'{path}/{print_name}.pdf')
+
+        # breakpoint()
+        # plot the indication diagram of recalibrated diagram
+        fig, ax = plt.subplots(figsize=(10, 10))
+        test_correctness, test_uncertainties = calibration.histogram_recalibration(correctness_scores, uncertainty)
+        ax = make_plots.indication_diagram(correctness=test_correctness, uncertainties=1-test_uncertainties, fig=fig, ax=ax, num_bins=20)
         ax.legend(loc='upper right', frameon=False, fontsize=30)
-        ax.set_xlabel(f'Percentage of {indicator} (%)', fontsize=30)
+        ax.set_xlabel(f'Percentage of calibrated {indicator} (%)', fontsize=30)
         ax.set_ylabel('Percentage of Regressed Correctness (%)', fontsize=30)
         plt.grid()
-        # plt.xticks(rotation=45)
         plt.tight_layout()
-        plt.savefig(f'{path}/{print_name}.pdf')
+        plt.savefig(f'{path}/{print_name}_recalibrated.pdf')
 
-        fig, ax = plt.subplots(figsize=(10, 10))
-        ax = make_plots.variability_diagram(confidence='Verb' in indicator, correctness=correctness_scores, uncertainties=uncertainty, fig=fig, ax=ax, num_bins=20)
-        # ax.set_title(f'{indicator} distribution')
-        ax.legend(loc='upper right', frameon=False, fontsize=30)
-        ax.set_xlabel(f'Percentage of {indicator} (%)', fontsize=30)
-        ax.set_ylabel('Variability of Conditioned Correctness', fontsize=30)
-        plt.grid()
-        # plt.xticks(rotation=45)
-        plt.tight_layout()
-        plt.savefig(f'{path}/{print_name}_variability.pdf')
+        # plot the variability of A conditioned on U
+        # fig, ax = plt.subplots(figsize=(10, 10))
+        # ax = make_plots.variability_diagram(confidence='Verb' in indicator, correctness=correctness_scores, uncertainties=uncertainty, fig=fig, ax=ax, num_bins=20)
+        # # ax.set_title(f'{indicator} distribution')
+        # ax.legend(loc='upper right', frameon=False, fontsize=30)
+        # ax.set_xlabel(f'Percentage of {indicator} (%)', fontsize=30)
+        # ax.set_ylabel('Variability of Conditioned Correctness', fontsize=30)
+        # plt.grid()
+        # # plt.xticks(rotation=45)
+        # plt.tight_layout()
+        # plt.savefig(f'{path}/{print_name}_variability.pdf')
