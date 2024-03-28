@@ -5,6 +5,8 @@ import argparse
 import numpy as np
 import pandas as pd
 from metrics import ranking
+import seaborn as sns
+import matplotlib.pyplot as plt
 epsilon = 1e-3
 
 if __name__ == '__main__':
@@ -23,6 +25,7 @@ if __name__ == '__main__':
         dfs.append(df)
     df = pd.concat(dfs)
     df = df.drop('mode', axis=1)
+    
 
     uncertainty_indicators = ['ecc_u_agreement_erce', 'degree_u_agreement_erce', 'spectral_u_agreement_erce',
                             'unnormalized_nll_all_erce', 'entropy_unnormalized_erce', 'verbalized_erce']
@@ -87,7 +90,12 @@ if __name__ == '__main__':
                 ranking.plot_cd_diagram(df_tmp_metric, title=None, save_dir=f'{path}/gpt-3.5-turbo_{metric}.pdf', col1='indicator', col2='des', col3='score', alpha=args.alpha)
             except:
                 print('No significant difference')
-                
+        
+        try:
+            ranking.plot_cd_diagram(df_tmp, title=None, save_dir=f'{path}/gpt-3.5-turbo_metric.pdf', col1='indicator', col2='des', col3='score', alpha=args.alpha)
+        except:
+            print('No significant difference')
+
     # second: plot cd with different temperatures
     for dataset in ['triviaqa']:
         for metric in ['rouge', 'rouge1', 'meteor', 'bert_similarity']:
@@ -127,7 +135,31 @@ if __name__ == '__main__':
                     ranking.plot_cd_diagram(df_tmp_temperature, title=None, save_dir=f'{path}/gpt-3.5-turbo_{temperature}.pdf', col1='indicator', col2='des', col3='score', alpha=args.alpha)
                 except:
                     print('No significant difference')
+            
+            try:
+                ranking.plot_cd_diagram(df_tmp, title=None, save_dir=f'{path}/gpt-3.5-turbo_temperature.pdf', col1='indicator', col2='des', col3='score', alpha=args.alpha)
+            except:
+                print('No significant difference')
 
+                # Customization
+            sns.set_theme(style="darkgrid")
+            plt.figure(figsize=(14, 5))
+            # Create and display the plot
+            sns.boxplot(x="temperature",
+                y="score",
+                hue="indicator",
+                data=df_tmp,
+                width=0.6,
+                linewidth=0.6,
+                showmeans=True,
+                fliersize=1,
+                )  
+
+            # # Add labels to the axes
+            plt.xlabel("Temperature")
+            plt.ylabel("RCE")
+            plt.savefig(f'{path}/gpt-3.5-turbo_{metric}_box.pdf')
+            
     # third, plot cd with opensource model
     for dataset in ['triviaqa', 'squad', 'nq-open']:
         for metric in ['rouge', 'rouge1', 'meteor', 'bert_similarity']:
@@ -174,6 +206,30 @@ if __name__ == '__main__':
                     ranking.plot_cd_diagram(df_tmp_temperature, title=None, save_dir=f'{path}/llama-2-chat_{temperature}.pdf', col1='indicator', col2='des', col3='score', alpha=args.alpha)
                 except:
                     print('No significant difference')
+            
+            # set temperature precision to 1 decimal
+            df_tmp['temperature'] = df_tmp['temperature'].apply(lambda x: f'{x:.1f}')
+            plt.figure(figsize=(14, 5))
+            # Create and display the plot
+            sns.boxplot(x="temperature",
+                        y="score",
+                        hue="indicator",
+                        data=df_tmp,
+                        width=0.6,
+                        linewidth=0.6,
+                        showmeans=True,
+                        fliersize=1,
+                        )  
+
+            # # Add labels to the axes
+            plt.xlabel("Temperature")
+            plt.ylabel("RCE")
+            plt.savefig(f'{path}/llama_{metric}_box.pdf')
+            
+            try:
+                ranking.plot_cd_diagram(df_tmp, title=None, save_dir=f'{path}/llama_temperature.pdf', col1='indicator', col2='des', col3='score', alpha=args.alpha)
+            except:
+                print('No significant difference')
 
     for temperature in [0.6, 1.0]:
         for dataset in ['triviaqa', 'squad', 'nq-open']:
@@ -218,5 +274,9 @@ if __name__ == '__main__':
                     ranking.plot_cd_diagram(df_tmp_metric, title=None, save_dir=f'{path}/llama_{metric}.pdf', col1='indicator', col2='des', col3='score', alpha=args.alpha)
                 except:
                     print('No significant difference')
-
+            
+            try:
+                ranking.plot_cd_diagram(df_tmp, title=None, save_dir=f'{path}/llama_metric.pdf', col1='indicator', col2='des', col3='score', alpha=args.alpha)
+            except:
+                print('No significant difference')
     print('Plot finished')

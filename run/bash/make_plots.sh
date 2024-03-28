@@ -12,6 +12,8 @@ python plot_graphs.py --model gpt-3.5-turbo --temperature 1.0 --dataset triviaqa
 python plot_graphs.py --model gpt-3.5-turbo --temperature 1.0 --dataset squad
 python plot_graphs.py --model gpt-3.5-turbo --temperature 1.0 --dataset nq-open
 python plot_graphs.py --model gpt-3.5-turbo --temperature 1.0 --dataset meadow
+python plot_graphs.py --model gpt-3.5-turbo --temperature 1.5 --dataset triviaqa
+python plot_graphs.py --model gpt-3.5-turbo --temperature 0.5 --dataset triviaqa
 
 python plot_graphs.py --model 'meta-llama/Llama-2-7b-chat-hf' --temperature 0.6 --dataset triviaqa --correctness bert_similarity
 python plot_graphs.py --model 'meta-llama/Llama-2-7b-chat-hf' --temperature 0.6 --dataset squad --correctness bert_similarity
