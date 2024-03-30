@@ -251,7 +251,8 @@ if __name__ == '__main__':
     plt.rcParams.update({'font.size': 30})
 
     correctness_scores = np.stack(df['normalized_score_all'])
-    # fig, ax = plt.subplots(figsize=(10, 10))
+    # fig, axs = plt.subplots(2, 1, figsize=(12, 10))
+    # fig, ax = plt.subplots(figsize=(10, 6))
     # for indicator in uncertainty_indicators:
     #     confidence = np.stack(df[indicator]) if 'Verb' in indicator else -np.stack(df[indicator])
     #     min_val = np.max(np.min(correctness_scores, axis=0))
@@ -263,7 +264,6 @@ if __name__ == '__main__':
     # # ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.25), ncol=3, fontsize=25, handletextpad=0.1)
     # plt.tight_layout()
     # ax.figure.savefig(f'{path}/auroc.pdf')
-    # breakpoint()
 
     # fig, ax = plt.subplots(figsize=(10, 10))
     # correctness_scores = np.stack(df['normalized_score_all'])
@@ -289,29 +289,37 @@ if __name__ == '__main__':
     #     x = np.stack(x).flatten()
     #     return x
     
-    plt.rcParams.update({'font.size': 20})
-    fig, ax = plt.subplots(figsize=(10, 6))
-    spacing = 0.3  # spacing between hat groups
-    width = 0.7
-    # plot the value range of the uncertainty measures
-    for idx, indicator in enumerate(uncertainty_indicators):
-        confidence = -np.stack(df[indicator]) if 'Verb' in indicator else np.stack(df[indicator])
-        uncertainty = confidence.flatten()
-        uncertainty_max = np.max(uncertainty)
-        uncertainty_min = np.min(uncertainty)
-        ax.bar(idx, uncertainty_max-uncertainty_min, width, bottom=uncertainty_min, label=indicator)
-    plt.grid()
-    ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.07), ncol=3, fontsize=22, handletextpad=0.1)
-    plt.xticks([])
-    plt.xlabel('Uncertainty/Confidence Measures')
-    plt.ylabel('Output Ranges')
-    plt.tight_layout()
-    plt.savefig(f'{path}/uncertainty.pdf')
-    breakpoint()
+    # plt.rcParams.update({'font.size': 30})
+    # # fig, ax = plt.subplots(figsize=(10, 6))
+    # spacing = 0.3  # spacing between hat groups
+    # width = 0.7
+    # # plot the value range of the uncertainty measures
+    # for idx, indicator in enumerate(uncertainty_indicators):
+    #     confidence = -np.stack(df[indicator]) if 'Verb' in indicator else np.stack(df[indicator])
+    #     uncertainty = confidence.flatten()
+    #     uncertainty_max = np.max(uncertainty)
+    #     uncertainty_min = np.min(uncertainty)
+    #     axs[1].bar(idx, uncertainty_max-uncertainty_min, width, bottom=uncertainty_min, label=indicator)
+    # plt.grid()
+    # # plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.07), ncol=3, fontsize=22, handletextpad=0.1)
+    # lines_labels = [ax.get_legend_handles_labels() for ax in fig.axes]
+    # lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
+    # # plt.figlegend(lines[:6], labels[:6], loc='center left', bbox_to_anchor=(0.8, 0.5), ncol=1, fontsize=22, handletextpad=0.1)
+    # plt.figlegend(lines[:6], labels[:6], loc = 'center right', 
+    #               bbox_to_anchor = (1.2, 0.5), 
+    #               fontsize=30,
+    #               bbox_transform = plt.gcf().transFigure,
+    #               borderaxespad=0.)
+    # plt.xticks([])
+    # plt.xlabel('Uncertainty/Confidence Measures')
+    # plt.ylabel('Output Ranges')
+    # plt.tight_layout()
+    # plt.savefig(f'{path}/uncertainty.pdf', bbox_inches='tight')
+    # breakpoint()
     
-    plt.rcParams.update({'font.size': 40})
+    plt.rcParams.update({'font.size': 50})
     # plot the histogram of correctness score
-    fig, ax = plt.subplots(figsize=(10, 10))
+    fig, ax = plt.subplots(figsize=(10, 8))
     ax.hist(correctness_scores.flatten(), bins=20, color='dodgerblue', edgecolor='dodgerblue')
     # ax.set_title('Correctness score distribution')
     ax.set_xlabel(r'Correctness A')
