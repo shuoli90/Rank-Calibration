@@ -59,7 +59,7 @@ if __name__ == '__main__':
     for seed in seeds:
         if model == 'gpt-3.5-turbo' and args.temperature == 1.0:
             data_verbalized = json.load(open(os.path.join(args.root_dir, file_names[3])))
-            indices = np.random.choice(len(data_verbalized), len(data_verbalized), replace=True).tolist()
+            indices = np.random.choice(len(data_verbalized), len(data_verbalized), replace=True, seed=seed).tolist()
             data_verbalized_bootstrap = [data_verbalized[index] for index in indices]
             tmps = []
             for row_verbalized in tqdm(data_verbalized_bootstrap):
@@ -98,7 +98,7 @@ if __name__ == '__main__':
                 tmps.append(tmp)
         else:
             # sample with replacement from the indices of the data
-            indices = np.random.choice(len(data_whitebox), len(data_whitebox), replace=True).tolist()
+            indices = np.random.choice(len(data_whitebox), len(data_whitebox), replace=True, seed=seed).tolist()
             data_whitebox_bootstrap = [data_whitebox[index] for index in indices]
             data_blackbox_disagreement_bootstrap = [data_blackbox_disagreement[index] for index in indices]
             data_blackbox_agreement_bootstrap = [data_blackbox_agreement[index] for index in indices]
