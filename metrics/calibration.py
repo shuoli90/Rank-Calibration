@@ -3,6 +3,7 @@ from scipy.stats import rankdata
 import warnings
 from scipy.stats import norm
 from sklearn.metrics import precision_recall_curve, auc
+import bisect
 
 def plugin_ece_est(correctness, confidences, num_bins, p=2, debias=True):
     '''
@@ -338,7 +339,6 @@ def regressed_correctness_vs_uncertainty_cdf(correctness, uncertainties, num_bin
     n = len(uncertainties)
     sorted_indices = np.argsort(uncertainties)
     sorted_correctness = correctness[sorted_indices]
-    # sorted_uncertainties = unceqrtainties[np.argsort(sorted_indices)]
     uncertainty_cdfs =  np.arange(0, n)/ (n-1)
     regressed_correctness = np.zeros(n)
     if not use_kernel_regress:
@@ -374,7 +374,6 @@ def correctness_variability_vs_uncertainty_cdf(correctness, uncertainties, num_b
     n = len(uncertainties)
     sorted_indices = np.argsort(uncertainties)
     sorted_correctness = correctness[sorted_indices]
-    # sorted_uncertainties = unceqrtainties[np.argsort(sorted_indices)]
     correctness_bin_means = np.zeros(num_bins)
     correctness_bin_stds = np.zeros(num_bins)
     bin_endpoints = [round(ele) for ele in np.linspace(0, n, num_bins+1)]
@@ -384,3 +383,55 @@ def correctness_variability_vs_uncertainty_cdf(correctness, uncertainties, num_b
             correctness_bin_means[idx_bin-1] = np.mean(sorted_correctness[lo:hi])
             correctness_bin_stds[idx_bin-1] = np.std(sorted_correctness[lo:hi])
     return correctness_bin_means, correctness_bin_stds
+
+def histogram_binning(correctness, uncertainties, num_bins = 20):
+    '''
+    Compute the histogram binning for re-rank-calibration with the calibratition set.
+    Input:
+        correctness: (a_1, ..., a_n) \in R^n 
+        uncertainties: (u_1, ..., u_n ) \in R^n
+    Output:
+        bin_boundaries: (b_1, ..., b_{B-1}) \in R^{B} the bin boundaries of sorted uncertainties
+        bin_correctness: (\bar{a}_1, ..., \bar{a}_B) \in R^B the regressed correctness 
+            for each bin
+    '''
+    n = len(uncertainties)
+    sorted_indices = np.argsort(uncertainties)
+    sorted_correctness = correctness[sorted_indices]
+    sorted_uncertainties = uncertainties[sorted_indices]
+    bin_correctness = np.zeros(num_bins)
+
+    bin_endpoints = [round(ele) for ele in np.linspace(0, n, num_bins+1)]
+    bin_boundaries = sorted_uncertainties[bin_endpoints[1:-1]]
+    for idx_bin in range(1, num_bins+1):
+        lo, hi = bin_endpoints[idx_bin-1], bin_endpoints[idx_bin]
+        a_hat = np.mean(sorted_correctness[lo:hi]) if hi > lo else 0
+        bin_correctness[idx_bin-1] = a_hat
+    return bin_boundaries, bin_correctness
+
+def histogram_recalibration(correctness, uncertainties, num_bins = 20, split_ratio = 0.5):
+    '''
+    Recalibrate with histogram binning.
+    Input:
+        correctness: (a_1, ..., a_n) \in R^n 
+        uncertainties: (u_1, ..., u_n ) \in R^n
+        split_ratio: the proportion of calibration set
+    Output:
+        test_correctness: (a_1, ..., a_{m}) \in R^{m} correctness of the remaining test set where m = n*(1-split_ratio)
+        test_uncertainties: (\hat{u}_1, ..., \hat{u}_m) \in R^m the recalibrated uncertainties
+    '''
+    np.random.seed(2024) # for reproducibility
+
+    n = len(uncertainties)
+    cal_size = round(n*split_ratio)
+    reorder = np.random.permutation(range(n))
+    correctness, uncertainties = correctness[reorder], uncertainties[reorder]+1e-3*np.random.randn(n) # break ties in binning
+    cal_correctness, test_correctness = correctness[:cal_size], correctness[cal_size:]
+    cal_uncertainties, test_uncertainties = uncertainties[:cal_size], uncertainties[cal_size:]
+    bin_boundaries, bin_correctness = histogram_binning(cal_correctness, cal_uncertainties, num_bins)
+
+    for idx_u, u in enumerate(test_uncertainties):
+        idx_bin = bisect.bisect_left(bin_boundaries, u)
+        test_uncertainties[idx_u] = bin_correctness[idx_bin]
+        
+    return test_correctness, test_uncertainties
