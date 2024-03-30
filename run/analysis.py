@@ -10,7 +10,7 @@ import multiprocessing
 import json
 from sklearn.metrics import roc_curve
 from utils import make_plots
-from metrics import correctness
+from metrics import correctness, calibration
 epsilon = 1e-3
 
 if __name__ == '__main__':
@@ -183,28 +183,28 @@ if __name__ == '__main__':
     except OSError as error: 
         print("Directory '%s' can not be created" % path) 
 
-    fig, ax = plt.subplots()
-    # correctness_score = df['score'].to_numpy()
-    correctness_score = df['normalized_score_greedy'].to_numpy()
-    for indicator in uncertainty_indicators:
-        confidence = -df[indicator].to_numpy()
-        thresholds = np.linspace(np.min(correctness_score)+epsilon, np.max(correctness_score)-epsilon, 10)
-        ax = make_plots.AUROC_vs_Correctness(correctness_score, confidence, thresholds, ax=ax, label=indicator)
-    ax.set_title(f'AUROC vs Correctness Threshold {model} {dataset} {method} {args.correctness}')
-    ax.grid()
-    ax.figure.savefig(f'{path}/auroc_vs_correctness_{model}_{dataset}_{args.correctness}.png')
+    # fig, ax = plt.subplots()
+    # # correctness_score = df['score'].to_numpy()
+    # correctness_score = df['normalized_score_greedy'].to_numpy()
+    # for indicator in uncertainty_indicators:
+    #     confidence = -df[indicator].to_numpy()
+    #     thresholds = np.linspace(np.min(correctness_score)+epsilon, np.max(correctness_score)-epsilon, 10)
+    #     ax = make_plots.AUROC_vs_Correctness(correctness_score, confidence, thresholds, ax=ax, label=indicator)
+    # ax.set_title(f'AUROC vs Correctness Threshold {model} {dataset} {method} {args.correctness}')
+    # ax.grid()
+    # ax.figure.savefig(f'{path}/auroc_vs_correctness_{model}_{dataset}_{args.correctness}.png')
 
-    correctness_scores = np.stack(df['normalized_score_all'])
-    fig, ax = plt.subplots()
-    for indicator in confidence_indicators:
-        confidence = np.stack(df[indicator]) if 'agreement' in indicator else -np.stack(df[indicator])
-        min_val = np.max(np.min(correctness_scores, axis=0))
-        max_val = np.min(np.max(correctness_scores, axis=0))
-        thresholds = np.linspace(min_val+epsilon, max_val-epsilon, 10)
-        ax = make_plots.AUROC_vs_Correctness_average(correctness_scores, confidence, thresholds, ax=ax, label=indicator)
-    ax.set_title(f'AUROC vs Correctness Threshold {model} {dataset} {args.correctness}')
-    ax.grid()
-    ax.figure.savefig(f'{path}/auroc_vs_correctness_average_{model}_{dataset}_{args.correctness}.png')
+    # correctness_scores = np.stack(df['normalized_score_all'])
+    # fig, ax = plt.subplots()
+    # for indicator in confidence_indicators:
+    #     confidence = np.stack(df[indicator]) if 'agreement' in indicator else -np.stack(df[indicator])
+    #     min_val = np.max(np.min(correctness_scores, axis=0))
+    #     max_val = np.min(np.max(correctness_scores, axis=0))
+    #     thresholds = np.linspace(min_val+epsilon, max_val-epsilon, 10)
+    #     ax = make_plots.AUROC_vs_Correctness_average(correctness_scores, confidence, thresholds, ax=ax, label=indicator)
+    # ax.set_title(f'AUROC vs Correctness Threshold {model} {dataset} {args.correctness}')
+    # ax.grid()
+    # ax.figure.savefig(f'{path}/auroc_vs_correctness_average_{model}_{dataset}_{args.correctness}.png')
 
     # correctness_score = df['normalized_score_greedy'].to_numpy()
     # correctness_scores = np.stack(df['normalized_score_all']).flatten()
@@ -222,25 +222,25 @@ if __name__ == '__main__':
     #     plt.grid()
     #     plt.savefig(f'{path}/erce_scatter_{model}_{dataset}_{indicator}_{args.correctness}.png')
 
-    fig, ax = plt.subplots()
-    ax.violinplot(df[uncertainty_indicators],
-                showmeans=False,
-                showmedians=True)
-    ax.set_title('Uncertainty value distribution')
-    ax.set_xticks([y+1 for y in range(len(uncertainty_indicators))], labels=uncertainty_indicators)
-    plt.grid()
-    # rotate xlable by 45 degree
-    plt.xticks(rotation=45)
-    plt.savefig(f'{path}/uncertainty_histogram_{model}_{dataset}_{args.correctness}.png')
+    # fig, ax = plt.subplots()
+    # ax.violinplot(df[uncertainty_indicators],
+    #             showmeans=False,
+    #             showmedians=True)
+    # ax.set_title('Uncertainty value distribution')
+    # ax.set_xticks([y+1 for y in range(len(uncertainty_indicators))], labels=uncertainty_indicators)
+    # plt.grid()
+    # # rotate xlable by 45 degree
+    # plt.xticks(rotation=45)
+    # plt.savefig(f'{path}/uncertainty_histogram_{model}_{dataset}_{args.correctness}.png')
 
-    # plot the histogram of correctness score
-    fig, ax = plt.subplots()
-    ax.hist(correctness_scores, bins=20)
-    ax.set_title('Correctness score distribution')
-    ax.set_xlabel('Correctness score')
-    ax.set_ylabel('Frequency')
-    plt.grid()
-    plt.savefig(f'{path}/correctness_histogram_{model}_{dataset}_{args.correctness}.png')
+    # # plot the histogram of correctness score
+    # fig, ax = plt.subplots()
+    # ax.hist(correctness_scores, bins=20)
+    # ax.set_title('Correctness score distribution')
+    # ax.set_xlabel('Correctness score')
+    # ax.set_ylabel('Frequency')
+    # plt.grid()
+    # plt.savefig(f'{path}/correctness_histogram_{model}_{dataset}_{args.correctness}.png')
 
     correctness_scores = np.stack(df['normalized_score_greedy']).flatten()
     for indicator in uncertainty_indicators:
@@ -255,16 +255,16 @@ if __name__ == '__main__':
         plt.tight_layout()
         plt.savefig(f'{path}/{indicator}_erce_{model}_{dataset}_{args.correctness}.png')
     
-    # correctness_scores = np.stack(df['normalized_score_all']).flatten()
-    # for indicator in confidence_indicators:
-    #     fig, ax = plt.subplots()
-    #     confidence = -np.stack(df[indicator]) if 'agreement' in indicator else np.stack(df[indicator])
-    #     ax = make_plots.indication_diagram(correctness=correctness_scores, uncertainties=confidence, ax=ax, num_bins=50)
-    #     ax.set_title(f'{indicator} distribution')
-    #     ax.set_xlabel(f'{indicator}')
-    #     ax.set_ylabel('Frequency')
-    #     plt.grid()
-    #     plt.savefig(f'{path}/{indicator}_confidence_histogram_{model}_{dataset}_{args.correctness}.png')
+    correctness_scores = np.stack(df['normalized_score_all']).flatten()
+    for indicator in confidence_indicators:
+        fig, ax = plt.subplots()
+        confidence = -np.stack(df[indicator]) if 'agreement' in indicator else np.stack(df[indicator])
+        ax = make_plots.indication_diagram(correctness=correctness_scores, uncertainties=confidence, ax=ax, num_bins=50)
+        ax.set_title(f'{indicator} distribution')
+        ax.set_xlabel(f'{indicator}')
+        ax.set_ylabel('Frequency')
+        plt.grid()
+        plt.savefig(f'{path}/{indicator}_confidence_histogram_{model}_{dataset}_{args.correctness}.png')
 
     confidence = df['unnormalized_entropy'].to_numpy()
     correctness_scores = df['normalized_score_greedy'].to_numpy()

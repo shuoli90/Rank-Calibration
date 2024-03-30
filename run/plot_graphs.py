@@ -9,7 +9,7 @@ import pandas as pd
 import multiprocessing
 import json
 from utils import make_plots
-from metrics import correctness
+from metrics import correctness, calibration
 import matplotlib.patches as patches
 epsilon = 1e-3
 
@@ -28,7 +28,7 @@ if __name__ == '__main__':
     file_names = [file for file in os.listdir(args.root_dir) if file.endswith('.json')]
     model = args.model.split('/')[-1]
     collected_file = '_'.join([model, args.dataset, str(args.temperature)]) + '.json'
-    collected = json.load(open(os.path.join('../collected', collected_file)))
+    # collected = json.load(open(os.path.join('../collected', collected_file)))
 
     # compute the correctness score
     if os.path.exists(f'../tmp/{model}_{args.dataset}_{args.temperature}_{args.correctness}.json'):
@@ -332,7 +332,7 @@ if __name__ == '__main__':
     plt.rcParams.update({'font.size': 35})
     correctness_scores = np.stack(df['normalized_score_all']).flatten()
     for indicator, print_name in zip(uncertainty_indicators, uncertainty_indicators_print):
-        fig, ax = plt.subplots(figsize=(10, 10))
+        # fig, ax = plt.subplots(figsize=(10, 10))
         confidence = -np.stack(df[indicator]) if 'Verb' in indicator else np.stack(df[indicator])
         uncertainty = confidence.flatten()
         # uncertainty = df[indicator].to_numpy() if 'Verb' not in indicator else -df[indicator].to_numpy()
@@ -346,13 +346,26 @@ if __name__ == '__main__':
         plt.tight_layout()
         plt.savefig(f'{path}/{print_name}.pdf')
 
+        # breakpoint()
+        # plot the indication diagram of recalibrated diagram
         fig, ax = plt.subplots(figsize=(10, 10))
-        ax = make_plots.variability_diagram(confidence='Verb' in indicator, correctness=correctness_scores, uncertainties=uncertainty, fig=fig, ax=ax, num_bins=20)
-        # ax.set_title(f'{indicator} distribution')
+        test_correctness, test_uncertainties = calibration.histogram_recalibration(correctness_scores, uncertainty)
+        ax = make_plots.indication_diagram(correctness=test_correctness, uncertainties=1-test_uncertainties, fig=fig, ax=ax, num_bins=20)
         ax.legend(loc='upper right', frameon=False, fontsize=30)
         ax.set_xlabel(f'Percentage of {indicator} (%)', fontsize=35)
         ax.set_ylabel('Variability of Correctness', fontsize=30)
         plt.grid()
-        # plt.xticks(rotation=45)
         plt.tight_layout()
-        plt.savefig(f'{path}/{print_name}_variability.pdf')
+        plt.savefig(f'{path}/{print_name}_recalibrated.pdf')
+
+        # plot the variability of A conditioned on U
+        # fig, ax = plt.subplots(figsize=(10, 10))
+        # ax = make_plots.variability_diagram(confidence='Verb' in indicator, correctness=correctness_scores, uncertainties=uncertainty, fig=fig, ax=ax, num_bins=20)
+        # # ax.set_title(f'{indicator} distribution')
+        # ax.legend(loc='upper right', frameon=False, fontsize=30)
+        # ax.set_xlabel(f'Percentage of {indicator} (%)', fontsize=30)
+        # ax.set_ylabel('Variability of Conditioned Correctness', fontsize=30)
+        # plt.grid()
+        # # plt.xticks(rotation=45)
+        # plt.tight_layout()
+        # plt.savefig(f'{path}/{print_name}_variability.pdf')
