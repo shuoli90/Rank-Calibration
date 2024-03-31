@@ -148,6 +148,11 @@ if __name__ == '__main__':
             uncertainty = np.stack(df[indicator]).flatten() if 'verbalized' not in indicator else -np.stack(df[indicator]).flatten()
             erce = calibration.plugin_RCE_est(correctness=correctness_scores, uncertainties=uncertainty, num_bins=20, p=1)
             tmp[f'{indicator}_erce'] = erce
+
+            # compute the RCE after histogram binning
+            test_correctness, test_uncertainties = calibration.histogram_recalibration(correctness_scores, uncertainty)
+            calibrated_erce = calibration.plugin_RCE_est(correctness=test_correctness, uncertainties=1-test_uncertainties, num_bins=20, p=1)
+            tmp[f'{indicator}_erce_calibrated'] = calibrated_erce
     
         results.append(tmp)
     
