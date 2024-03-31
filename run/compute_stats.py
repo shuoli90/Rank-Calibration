@@ -54,12 +54,14 @@ if __name__ == '__main__':
     data_whitebox = json.load(open(os.path.join(args.root_dir, file_names[0])))
     data_blackbox_disagreement = json.load(open(os.path.join(args.root_dir, file_names[1])))
     data_blackbox_agreement = json.load(open(os.path.join(args.root_dir, file_names[2])))
+
     results = []
     seeds = list(range(20))
     for seed in seeds:
+        np.random.seed(seed)
         if model == 'gpt-3.5-turbo' and args.temperature == 1.0:
             data_verbalized = json.load(open(os.path.join(args.root_dir, file_names[3])))
-            indices = np.random.choice(len(data_verbalized), len(data_verbalized), replace=True, seed=seed).tolist()
+            indices = np.random.choice(len(data_verbalized), len(data_verbalized), replace=True).tolist()
             data_verbalized_bootstrap = [data_verbalized[index] for index in indices]
             tmps = []
             for row_verbalized in tqdm(data_verbalized_bootstrap):
@@ -98,14 +100,14 @@ if __name__ == '__main__':
                 tmps.append(tmp)
         else:
             # sample with replacement from the indices of the data
-            indices = np.random.choice(len(data_whitebox), len(data_whitebox), replace=True, seed=seed).tolist()
+            indices = np.random.choice(len(data_whitebox), len(data_whitebox), replace=True).tolist()
             data_whitebox_bootstrap = [data_whitebox[index] for index in indices]
             data_blackbox_disagreement_bootstrap = [data_blackbox_disagreement[index] for index in indices]
             data_blackbox_agreement_bootstrap = [data_blackbox_agreement[index] for index in indices]
             tmps = []
-            for idx, (row_whitebox, row_blackbox_disagreement, row_blackbox_agreement) in tqdm(enumerate(zip(data_whitebox_bootstrap, data_blackbox_disagreement_bootstrap, data_blackbox_agreement_bootstrap)), total=len(data_whitebox)):
+            for idx, (index, row_whitebox, row_blackbox_disagreement, row_blackbox_agreement) in tqdm(enumerate(zip(indices, data_whitebox_bootstrap, data_blackbox_disagreement_bootstrap, data_blackbox_agreement_bootstrap)), total=len(data_whitebox)):
                 tmp = {'model':model, 'dataset':dataset, 'metric':args.correctness, 'seed':seed, 'temperature':args.temperature}
-                
+
                 tmp['ecc_c_disagreement'] = row_blackbox_disagreement['ecc_c']
                 tmp['degree_c_disagreement'] = row_blackbox_disagreement['degree_c']
                 tmp['ecc_u_disagreement'] = [row_blackbox_disagreement['ecc_u']] * 10
@@ -124,7 +126,7 @@ if __name__ == '__main__':
                 tmp['unnormalized_nll_all'] = row_whitebox['unnormalized_nll']
 
                 # select scores with the same index
-                score = scores[scores['id'] == idx]
+                score = scores[scores['id'] == index]
                 tmp['normalized_score_all'] = score.iloc[0]['normalized_score']
                 tmp['unnormalized_score_all'] = score.iloc[0]['unnormalized_score']
                 normalized_min_index = np.argmin(tmp['normalized_nll_all'])
