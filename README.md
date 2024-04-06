@@ -35,6 +35,17 @@ pip install -r requirements.txt
 
 ## Reproduce Results
 
+- To plot indication diagrams, uncertainty/correctness distributions on all experiment configurations:
+```
+cd submission
+./bash/make_plots.sh
+```
+- To plot RCE boxplots, critical difference diagrams on all experiment configurations:
+```
+cd submission
+python make_tables.py
+```
+In both cases, plots will be saved under `calibration_results` and `evaluation_stats` folder with the folder names indicating the corresponding experiment configuration.
 
 ## Citation
 Please feel free to email us at [Xinmeng Huamg](mailto:xinmengh@sas.upenn.edu) and [Shuo Li](mailto:lishuo1@seas.upenn.edu). If you find this work useful in your own research, please consider citing our work:
