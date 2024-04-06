@@ -33,6 +33,16 @@ pip install -r requirements.txt
 
 - Before using OpenAI APIs, make sure you have the API key `OPENAI_API_KEY` updated in ./run/.env.
 
+## File Structure
+- `figures`: images used for github repo
+- `indicators`: uncertainty measure implementations
+- `metrics`: correctness and calibration metrics, e.g., rank-calibration, ECE, etc
+- `models`: OpenAI and opensource model implementations
+- `run`: functions exposed to user to generate responses, calibrate uncertainty/confidence, and compute evaluation stats
+- `submission`: scripts and files to reproduce results reported in submission
+- `tasks`: different datasets loading implementation
+- `utils`: miscellaneous functions implementation
+
 ## Reproduce Results
 
 - To plot indication diagrams, uncertainty/correctness distributions on all experiment configurations:
