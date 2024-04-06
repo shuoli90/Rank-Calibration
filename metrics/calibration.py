@@ -4,6 +4,7 @@ import warnings
 from scipy.stats import norm
 from sklearn.metrics import precision_recall_curve, auc
 import bisect
+from sklearn.metrics import roc_auc_score
 
 def plugin_ece_est(correctness, confidences, num_bins, p=2, debias=True):
     '''
@@ -59,6 +60,16 @@ class ECE_estimate():
             return self.metric(labels, confidences, )
         else:
             return self.metric(labels, confidences, num_bins)
+
+def AUROC(correctnesses, confidences, threshold=0.7):
+    # compute AUROC for different correctness thresholds
+    y_true = correctnesses >= threshold
+    y_score = confidences
+    try:
+        auroc = roc_auc_score(y_true, y_score)
+    except ValueError:
+        raise ValueError(f"Problematic")
+    return auroc
 
 def AUARC(labels, confidences):
     # An accuracy rejection curve (ARC) is a function representating the accuracy of a classifier \

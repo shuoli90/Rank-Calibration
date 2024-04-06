@@ -6,6 +6,7 @@ from models.opensource import BERTEmbedding
 class Score():
 
     def __init__(self, metric_name='rouge', mode='rouge1'):
+        self.metric_name = metric_name
         self.metric = evaluate.load(metric_name)
         self.mode = mode
     
@@ -17,7 +18,10 @@ class Score():
         Output:
             
         '''
-        score = self.metric.compute(predictions=predictions, references=references, use_aggregator=use_aggregator)
+        if 'rouge' in self.metric_name:
+            score = self.metric.compute(predictions=predictions, references=references, use_aggregator=use_aggregator)
+        else:
+            score = self.metric.compute(predictions=predictions, references=references)
         if isinstance(score, dict):
             score = score[self.mode]
         return score
