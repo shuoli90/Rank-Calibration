@@ -23,3 +23,12 @@ Indication Diagram via Rank-Calibration
 \right],$$ -->
 where $U^\prime$ is an independent copy of $U$., which here is lower for $U_{\rm NLL}$ than $U_{\rm Ecc}$.
 
+## Getting Started
+
+- Create virtual environment using
+```
+python -m venv rce
+pip install -r requirements.txt
+```
+
+- Before using OpenAI APIs, make sure you have the API key `OPENAI_API_KEY` updated in ./run/.env.
