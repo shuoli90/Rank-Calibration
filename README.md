@@ -14,6 +14,7 @@ Common workflow for assessing the quality of an LM uncertainty/confidence measur
 
 <!-- ## Indication Diagram -->
 ![Indication](https://github.com/shuoli90/calibrate_framework/blob/main/figures/Indication.png)
-*Indication diagrams* comparing two uncertainty measures, $U_{\rm NLL}$ (negative log-likelihood) and $U_{\rm Ecc}$ (eccentricity), for the GPT-3.5-turbo model on the TriviaQA benchmark. The ${\color{red} red}$ bars indicate the average correctness of different outputs, as a function of the corresponding relative uncertainty levels. The <span style="color:blue">blue</span> and <span style="color:#F67280">shallow red</span> areas---deviating from the anti-diagonal line---indicate where the uncertainty measures are over-optimistic and pessimistic, respectively. Their sum is our *rank-miscalibration* metric $$\mathbf{E}_{U}\hspace{-2pt}\left[\left|\mathbf{P}_{U'}(\mathrm{reg}(U^\prime)\hspace{-1pt}\geq \hspace{-1pt}\mathrm{reg}(U))\right|
-\right],$$
-where $U^\prime$ is an independent copy of $U$., which here is lower for $U_{\rm NLL}$ than $U_{\rm Ecc}$.
+*Indication diagrams* comparing two uncertainty measures, $U_{\rm NLL}$ (negative log-likelihood) and $U_{\rm Ecc}$ (eccentricity), for the GPT-3.5-turbo model on the TriviaQA benchmark. The ${\color{red} red}$ bars indicate the average correctness of different outputs, as a function of the corresponding relative uncertainty levels. The <span style="color:blue">blue</span> and <span style="color:#F67280">shallow red</span> areas
+<!-- ---deviating from the anti-diagonal line---indicate where the uncertainty measures are over-optimistic and pessimistic, respectively. Their sum is our *rank-miscalibration* metric $$\mathbf{E}_{U}\hspace{-2pt}\left[\left|\mathbf{P}_{U'}(\mathrm{reg}(U^\prime)\hspace{-1pt}\geq \hspace{-1pt}\mathrm{reg}(U))\right| -->
+<!-- \right],$$ -->
+<!-- where $U^\prime$ is an independent copy of $U$., which here is lower for $U_{\rm NLL}$ than $U_{\rm Ecc}$. -->
