@@ -53,7 +53,7 @@ if __name__ == '__main__':
     plt.rcParams.update({'font.size': 40})
     for dataset in ['triviaqa', 'squad', 'nq-open', 'meadow']:
         try: 
-            path = os.path.join("{args.root_dir}", f"gpt_correctness_{dataset}")
+            path = os.path.join(f"{args.root_dir}", f"gpt_correctness_{dataset}")
             os.makedirs(path, exist_ok = True) 
         except OSError as error: 
             print("Directory '%s' can not be created" % path) 
