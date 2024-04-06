@@ -153,6 +153,9 @@ if __name__ == '__main__':
             test_correctness, test_uncertainties = calibration.histogram_recalibration(correctness_scores, uncertainty)
             calibrated_erce = calibration.plugin_RCE_est(correctness=test_correctness, uncertainties=1-test_uncertainties, num_bins=20, p=1)
             tmp[f'{indicator}_erce_calibrated'] = calibrated_erce
+
+            auroc = calibration.AUROC(correctnesses=correctness_scores, confidences=-uncertainty)
+            tmp[f'{indicator}_auroc'] = auroc
     
         results.append(tmp)
     
