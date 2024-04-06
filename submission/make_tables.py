@@ -11,7 +11,7 @@ epsilon = 1e-3
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--root_dir', type=str, default='../stats')
+    parser.add_argument('--root_dir', type=str, default='../submission/evaluation_stats')
     parser.add_argument('--alpha', type=float, default=0.05)
     args = parser.parse_args()
 
@@ -53,7 +53,7 @@ if __name__ == '__main__':
     plt.rcParams.update({'font.size': 40})
     for dataset in ['triviaqa', 'squad', 'nq-open', 'meadow']:
         try: 
-            path = os.path.join("../stats", f"gpt_correctness_{dataset}")
+            path = os.path.join("{args.root_dir}", f"gpt_correctness_{dataset}")
             os.makedirs(path, exist_ok = True) 
         except OSError as error: 
             print("Directory '%s' can not be created" % path) 
@@ -195,7 +195,7 @@ if __name__ == '__main__':
     for dataset in ['triviaqa']:
         for metric in ['rouge', 'rouge1', 'meteor', 'bert_similarity']:
             try: 
-                path = os.path.join("../stats", f"gpt_temperature_{dataset}_{metric}")
+                path = os.path.join("{args.root_dir}", f"gpt_temperature_{dataset}_{metric}")
                 os.makedirs(path, exist_ok = True) 
             except OSError as error: 
                 print("Directory '%s' can not be created" % path) 
@@ -328,7 +328,7 @@ if __name__ == '__main__':
     for dataset in ['triviaqa', 'squad', 'nq-open']:
         for metric in ['rouge', 'rouge1', 'meteor', 'bert_similarity']:
             try: 
-                path = os.path.join("../stats", f"llama_temperature_{dataset}_{metric}")
+                path = os.path.join("{args.root_dir}", f"llama_temperature_{dataset}_{metric}")
                 os.makedirs(path, exist_ok = True) 
             except OSError as error: 
                 print("Directory '%s' can not be created" % path) 
@@ -469,7 +469,7 @@ if __name__ == '__main__':
     for temperature in [0.6, 1.0]:
         for dataset in ['triviaqa', 'squad', 'nq-open']:
             try: 
-                path = os.path.join("../stats", f"llama_correctness_{temperature}_{dataset}")
+                path = os.path.join("{args.root_dir}", f"llama_correctness_{temperature}_{dataset}")
                 os.makedirs(path, exist_ok = True) 
             except OSError as error: 
                 print("Directory '%s' can not be created" % path) 

@@ -10,7 +10,7 @@ epsilon = 1e-3
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--root_dir', type=str, default='../tmp')
+    parser.add_argument('--root_dir', type=str, default='../submission/calibration_results')
     parser.add_argument('--correctness', type=str, default='rouge')
     parser.add_argument('--model', type=str, default='gpt-3.5-turbo')
     parser.add_argument('--temperature', type=float, default=1.0)
@@ -28,8 +28,8 @@ if __name__ == '__main__':
     file_names = [file for file in os.listdir(args.root_dir) if file.endswith('.json')]
     model = args.model.split('/')[-1]
     # compute the correctness score
-    if os.path.exists(f'../tmp/{model}_{args.dataset}_{args.temperature}_{args.correctness}.json'):
-        scores = json.load(open(f'../tmp/{model}_{args.dataset}_{args.temperature}_{args.correctness}.json'))
+    if os.path.exists(f'{args.root_dir}/{model}_{args.dataset}_{args.temperature}_{args.correctness}.json'):
+        scores = json.load(open(f'{args.root_dir}/{model}_{args.dataset}_{args.temperature}_{args.correctness}.json'))
     else:
         raise ValueError(f"File not found: {model}_{args.dataset}_{args.temperature}_{args.correctness}.json")
     scores = pd.DataFrame(scores).dropna(axis=0)
