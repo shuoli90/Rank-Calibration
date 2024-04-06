@@ -32,3 +32,20 @@ pip install -r requirements.txt
 ```
 
 - Before using OpenAI APIs, make sure you have the API key `OPENAI_API_KEY` updated in ./run/.env.
+
+## Reproduce Results
+
+
+## Citation
+Please feel free to email us at [Xinmeng Huamg](mailto:xinmengh@sas.upenn.edu) and [Shuo Li](mailto:lishuo1@seas.upenn.edu). If you find this work useful in your own research, please consider citing our work:
+```
+@misc{huang2024uncertainty,
+      title={Uncertainty in Language Models: Assessment through Rank-Calibration}, 
+      author={Xinmeng Huang and Shuo Li and Mengxin Yu and Matteo Sesia and Hamed Hassani and Insup Lee and Osbert Bastani and Edgar Dobriban},
+      year={2024},
+      eprint={2404.03163},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL}
+}
+```
+
