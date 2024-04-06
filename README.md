@@ -1,7 +1,7 @@
 # **Uncertainty in Language Models: Assessment through Rank-Calibration**
 <div align="center">
 
-[![arXiv](https://img.shields.io/badge/cs.LG-arXiv%3A2310.03957-b31b1b)](https://arxiv.org/abs/2404.03163)
+[![arXiv](https://img.shields.io/badge/cs.LG-arXiv%3A2404.03163-b31b1b)](https://arxiv.org/abs/2404.03163)
 
 </div>
 
