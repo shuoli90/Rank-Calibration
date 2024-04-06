@@ -47,7 +47,7 @@ def AUROC_vs_Correctness_average(correctnesses, confidences, thresholds, ax, plo
     # plot
     if plot:
         df = pd.DataFrame(dict(AUROC=aurocs, Threshold=thresholds))
-        sns.lineplot(x="Threshold", y="AUROC", data=df, ax=ax, linewidth=3, **kwargs)
+        sns.lineplot(x="Threshold", y="AUROC", data=df, ax=ax, legend=None, linewidth=3, **kwargs)
         return ax
     else:
         return aurocs
