@@ -48,4 +48,6 @@ Please feel free to email us at [Xinmeng Huamg](mailto:xinmengh@sas.upenn.edu) a
       primaryClass={cs.CL}
 }
 ```
+### License
+This codebase is released under [MIT License](LICENSE).
 
