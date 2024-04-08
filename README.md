@@ -23,8 +23,8 @@ Indication Diagram via Rank-Calibration
 ---deviating from the anti-diagonal line---indicate where the uncertainty measures are over-optimistic and pessimistic, respectively. Their sum is our *rank-miscalibration* metric:
 <!-- ![Indication](https://github.com/shuoli90/calibrate_framework/blob/main/figures/RCE.png) -->
 $$\mathbf{E}_{U}$$
-%  \left[\left|\mathbf{P}_{U'}(\text{reg}(U^\prime) \geq \text{reg}(U))\right|
-% \right],$$
+<!-- \left[\left|\mathbf{P}_{U'}(\text{reg}(U^\prime) \geq \text{reg}(U))\right| -->
+<!-- \right],$$ -->
 where $U^\prime$ is an independent copy of $U$, which here is lower for $U_{\rm NLL}$ than $U_{\rm Ecc}$.
 
 ## Getting Started
