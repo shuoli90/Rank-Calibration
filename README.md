@@ -22,7 +22,7 @@ Indication Diagram via Rank-Calibration
 *Indication diagrams* comparing two uncertainty measures, $U_{\rm NLL}$ (negative log-likelihood) and $U_{\rm Ecc}$ (eccentricity), for the GPT-3.5-turbo model on the TriviaQA benchmark. The ${\color{red} red}$ bars indicate the average correctness of different outputs, as a function of the corresponding relative uncertainty levels. The ${\color{blue} blue}$ and ${\color{#F67280} shallow \ red}$ areas
 ---deviating from the anti-diagonal line---indicate where the uncertainty measures are over-optimistic and pessimistic, respectively. Their sum is our *rank-miscalibration* metric:
 <!-- ![Indication](https://github.com/shuoli90/calibrate_framework/blob/main/figures/RCE.png) -->
-$$\mathbf{E}_{U} \left[\left|\mathbf{P}_{U'}(\text{reg}(U^\prime) \geq \text{reg}(U))\right| \right],$$
+$$\mathbb{E}_{U}\left[\left|\mathbb{P}_{U'}(\text{reg}(U^\prime) \geq \text{reg}(U))-\mathbb{P}_{U'}(U^\prime \leq U)\right| \right], $$
 where $U^\prime$ is an independent copy of $U$, which here is lower for $U_{\rm NLL}$ than $U_{\rm Ecc}$.
 
 ## Getting Started
