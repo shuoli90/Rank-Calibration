@@ -12,7 +12,6 @@ seaborn==0.13.2
 sentence_transformers==2.2.2
 tenacity==8.2.2
 torch==2.1.0
-torch==2.0.1
 tqdm==4.66.2
 transformers==4.38.1
 umap_learn==0.5.3
